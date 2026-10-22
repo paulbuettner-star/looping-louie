@@ -2060,11 +2060,11 @@ function renderLocalSetup() {
    Online play. On claude.ai the page's "room" connects everyone who has it open.
    A table is a named room: the host runs the Match and shares snapshots
    through presence; guests share their lever presses and hits the same way.
-   Anywhere else (the public copy on GitHub Pages) peerRoom() stands in for
-   the room, peer to peer over WebRTC.
+   Anywhere else (the public copy on GitHub Pages) relayRoom() stands in for
+   the room, through our own relay on Cloudflare.
    ====================================================================== */
 const net = {
-  room: null, state: "pending", connected: false, p2p: false, busy: false, invite: "",
+  room: null, state: "pending", connected: false, hosted: false, busy: false, invite: "",
   table: null, code: "", isHost: false, myPeer: null,
   lobby: null, round: 0, hostNick: "", lastHostPresence: null,
   hostMissingSince: 0, everSawHost: false, peerSeen: new Map(), lastAd: "", lastLobbyPush: "",
@@ -2077,146 +2077,107 @@ function useCap(name) {
 }
 const inClaude = () => !!(window.claude && typeof window.claude.use === "function");
 
-/* Peer-to-peer tables (PeerJS). The host's browser is the table: it takes the
-   PeerJS id for the table code, guests connect straight to it, and it sends its
-   presence to every guest. Guests only need the host's presence, so theirs goes
-   to the host alone. Copies just the parts of the room API the game uses. */
-const PEER_PREFIX = "pb-looping-louie-";
-const PEER_QUIET = 8000;       // ms without a message before a connection counts as gone
-function loadPeerJs() {
-  return new Promise((ok, fail) => {
-    if (window.Peer) { ok(window.Peer); return; }
-    const s = document.createElement("script");
-    s.src = "peerjs.min.js";
-    s.onload = () => (window.Peer ? ok(window.Peer) : fail(new Error("no Peer")));
-    s.onerror = () => fail(new Error("PeerJS did not load"));
-    document.head.append(s);
-  });
+/* Tables off claude.ai: relayRoom() stands in for the room. Each room ("lobby",
+   or a table code) is one WebSocket to our Cloudflare relay (looping-louie/relay
+   in the Pages repo), which passes every presence to everyone else in that room.
+   Plain HTTPS WebSockets, so it works on any network. Copies just the parts of
+   the room API the game uses. */
+const RELAY_URL = "wss://looping-louie.looping-louie-relay.workers.dev";
+const RELAY_PING = 20000;      // ms between keep-alive pings (answered by the relay without waking it)
+function relayFail(code) { return Object.assign(new Error(code), { code }); }
+function relayChannel(name, reconnect) {
+  const me = { peer: "", sameTab: true, kind: "viewer", presence: null };
+  const others = new Map();            // id -> { peer, kind, presence }
+  const listeners = [], errs = [], conns = [];
+  let ws = null, closed = false, ping = 0, lastPong = 0, retry = 0;
+  let ok, ko;
+  const ready = new Promise((a, b) => { ok = a; ko = b; });
+  const obj = (p) => (p && typeof p === "object" && !Array.isArray(p) ? p : null);
+  const peers = () => [me, ...others.values()].map((p) => ({ peer: p.peer, sameTab: !!p.sameTab, kind: p.kind, presence: p.presence }));
+  const emit = () => { if (!closed) for (const fn of listeners) fn({ peers: peers() }); };
+  const send = (m) => { if (ws && ws.readyState === 1) try { ws.send(typeof m === "string" ? m : JSON.stringify(m)); } catch (e) { /* closing */ } };
+  function lost(sock) {
+    if (sock !== ws || closed) return;
+    ws = null; clearInterval(ping);
+    try { sock.close(); } catch (e) { /* gone */ }
+    others.clear();
+    for (const fn of conns) fn(false);
+    ko(relayFail("network"));         // only matters before the welcome
+    if (reconnect) { setTimeout(() => { if (!closed) open(); }, Math.min(10000, 1000 * 2 ** retry++)); emit(); }
+    else { closed = true; for (const fn of errs) fn(); }
+  }
+  function open() {
+    const sock = ws = new WebSocket(RELAY_URL + "/r/" + name);
+    const timer = setTimeout(() => lost(sock), 10000);
+    sock.onmessage = (e) => {
+      if (e.data === "pong") { lastPong = performance.now(); return; }
+      let m;
+      try { m = JSON.parse(e.data); } catch (err) { return; }
+      if (!m || typeof m !== "object") return;
+      if (m.t === "welcome") {
+        clearTimeout(timer); retry = 0;
+        me.peer = String(m.id); others.clear();
+        for (const p of Array.isArray(m.peers) ? m.peers : []) if (p && p.id) others.set(String(p.id), { peer: String(p.id), kind: "viewer", presence: obj(p.p) });
+        if (me.presence) send({ t: "p", p: me.presence });
+        lastPong = performance.now();
+        ping = setInterval(() => { if (performance.now() - lastPong > 2.5 * RELAY_PING) lost(sock); else send("ping"); }, RELAY_PING);
+        for (const fn of conns) fn(true);
+        ok(api); emit();
+      } else if (m.t === "peer" && m.id) { others.set(String(m.id), { peer: String(m.id), kind: "viewer", presence: obj(m.p) }); lastPong = performance.now(); emit(); }
+      else if (m.t === "left" && m.id) { others.delete(String(m.id)); emit(); }
+      else if (m.t === "full") { clearTimeout(timer); ko(relayFail("limit_reached")); closed = !reconnect || closed; }
+    };
+    sock.onclose = () => { clearTimeout(timer); lost(sock); };
+  }
+  const api = {
+    ready, peers,
+    onPeers(fn, onErr) { listeners.push(fn); if (onErr) errs.push(onErr); queueMicrotask(() => { if (!closed) fn({ peers: peers() }); }); },
+    onConnection(fn) { conns.push(fn); fn(!!(ws && ws.readyState === 1 && me.peer)); },
+    presence(patch) { me.presence = mergePresence(me.presence, patch); send({ t: "p", p: me.presence }); return Promise.resolve(); },
+    leave() { closed = true; clearInterval(ping); const s = ws; ws = null; if (s) try { s.close(); } catch (e) { /* gone */ } return Promise.resolve(); },
+  };
+  open();
+  return api;
 }
 function mergePresence(cur, patch) {
   const o = Object.assign({}, cur);
   for (const k of Object.keys(patch)) { if (patch[k] === null) delete o[k]; else o[k] = patch[k]; }
   return o;
 }
-function peerRoom(Peer) {
-  const fail = (code) => Object.assign(new Error(code), { code });
-  function openTable(code, asHost) {
-    return new Promise((resolve, reject) => {
-      const peer = asHost ? new Peer(PEER_PREFIX + code, { debug: 0 }) : new Peer({ debug: 0 });
-      const me = { peer: "", sameTab: true, kind: "viewer", presence: null };
-      const others = new Map();          // peer id -> { peer, kind, presence, conn, last }
-      const listeners = [];
-      let settled = false, closed = false, hostConn = null, beat = 0;
-      const peers = () => [me, ...others.values()].map((p) => ({ peer: p.peer, sameTab: !!p.sameTab, kind: p.kind, presence: p.presence }));
-      const emit = () => { if (!closed) for (const fn of listeners) fn({ peers: peers() }); };
-      const drop = (id, conn) => {
-        const o = others.get(id);
-        if (!o || o.conn !== conn) return;
-        others.delete(id);
-        try { conn.close(); } catch (e) { /* already closed */ }
-        emit();
-      };
-      const send = (conn, msg) => { try { if (conn.open) conn.send(msg); } catch (e) { /* closing */ } };
-      const t = {
-        peers,
-        onPeers(fn) { listeners.push(fn); queueMicrotask(() => { if (!closed) fn({ peers: peers() }); }); },
-        presence(patch) {
-          me.presence = mergePresence(me.presence, patch);
-          if (asHost) for (const o of others.values()) send(o.conn, { t: "h", p: me.presence });
-          else if (hostConn) send(hostConn, { t: "g", p: me.presence });
-          return Promise.resolve();
-        },
-        leave() {
-          closed = true; clearInterval(beat);
-          for (const o of others.values()) try { o.conn.close(); } catch (e) { /* gone */ }
-          others.clear();
-          try { peer.destroy(); } catch (e) { /* gone */ }
-          return Promise.resolve();
-        },
-      };
-      const settle = (err) => {
-        if (settled) return;
-        settled = true; clearTimeout(timer);
-        if (err) { t.leave(); reject(err); return; }
-        // heartbeat: a tab that closes without saying goodbye drops out after PEER_QUIET
-        beat = setInterval(() => {
-          const now = performance.now();
-          for (const o of [...others.values()]) {
-            if (now - o.last > PEER_QUIET) drop(o.peer, o.conn);
-            else send(o.conn, { t: "k" });
-          }
-        }, 2000);
-        resolve(t);
-      };
-      const timer = setTimeout(() => settle(fail("timeout")), 15000);
-      const track = (conn, onData) => {
-        conn.on("data", (m) => {
-          const o = others.get(conn.peer);
-          if (!o || o.conn !== conn || !m || typeof m !== "object") return;
-          o.last = performance.now();
-          if (m.p && typeof m.p === "object" && !Array.isArray(m.p)) onData(o, m);
-        });
-        conn.on("close", () => drop(conn.peer, conn));
-        conn.on("error", () => drop(conn.peer, conn));
-      };
-      peer.on("open", (id) => {
-        me.peer = id;
-        if (asHost) { settle(null); return; }
-        const conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "json" });
-        conn.on("open", () => {
-          hostConn = conn;
-          others.set(conn.peer, { peer: conn.peer, kind: "viewer", presence: null, conn, last: performance.now() });
-          if (me.presence) send(conn, { t: "g", p: me.presence });
-          settle(null);
-        });
-        track(conn, (o, m) => { if (m.t === "h") { o.presence = m.p; emit(); } });
-      });
-      if (asHost) peer.on("connection", (conn) => {
-        conn.on("open", () => {
-          if (closed || others.size >= 8) { conn.close(); return; }
-          others.set(conn.peer, { peer: conn.peer, kind: "viewer", presence: null, conn, last: performance.now() });
-          if (me.presence) send(conn, { t: "h", p: me.presence });
-          emit();
-        });
-        track(conn, (o, m) => { if (m.t === "g") { o.presence = m.p; emit(); } });
-      });
-      peer.on("error", (err) => {
-        const type = err && err.type;
-        if (!settled) settle(fail(type === "unavailable-id" ? "taken" : type === "peer-unavailable" ? "no_table" : "network"));
-      });
-      // lost the PeerJS server: open connections keep working, but new guests need it to find the host
-      peer.on("disconnected", () => { if (settled && !closed && asHost) setTimeout(() => { if (!closed) try { peer.reconnect(); } catch (e) { /* destroyed */ } }, 1500); });
-    });
-  }
+const hasHost = (t) => t.peers().some((p) => !p.sameTab && p.presence && p.presence.louie === 1 && p.presence.host === true);
+function relayRoom() {
+  const lobby = relayChannel("lobby", true);
+  lobby.ready.catch(() => {});         // the lobby keeps reconnecting on its own
   return {
-    peers: () => [],
-    presence: () => Promise.resolve(),
-    onPeers() {},
-    onConnection(fn) {
-      const f = () => fn(navigator.onLine !== false);
-      window.addEventListener("online", f); window.addEventListener("offline", f);
-      f();
+    peers: lobby.peers, presence: lobby.presence, onConnection: lobby.onConnection,
+    onPeers: (fn, onErr) => lobby.onPeers(fn, onErr),
+    async join(code) {                 // a guest: there must be a host at the table
+      const t = await relayChannel(code, false).ready;
+      if (!hasHost(t)) { t.leave(); throw relayFail("no_table"); }
+      return t;
     },
-    join: (code) => openTable(code, false),
-    hostJoin: (code) => openTable(code, true),
+    async hostJoin(code) {             // a host: the code must be free
+      const t = await relayChannel(code, false).ready;
+      if (t.peers().length > 1) { t.leave(); throw relayFail("taken"); }
+      return t;
+    },
   };
 }
-function initPeerNet() {
-  net.p2p = true;
+function initRelayNet() {
+  net.hosted = true;
   const h = decodeURIComponent(location.hash.slice(1)).trim().toLowerCase();
   if (CODE_RE.test(h)) {               // opened from an invite link
     net.invite = h;
     $("code-input").value = h; $("nick").value = settings.nick;
     showScreen("online");
   }
-  loadPeerJs().then((Peer) => {
-    net.room = peerRoom(Peer); net.state = "ready";
-    net.room.onConnection((c) => { net.connected = c; renderOnline(); });
-    renderOnline();
-  }).catch(() => { net.state = "off"; renderOnline(); });
+  net.room = relayRoom(); net.state = "ready";
+  net.room.onConnection((c) => { net.connected = c; renderOnline(); });
+  net.room.onPeers(() => { if (currentScreen === "online") renderTableList(); });
+  renderOnline();
 }
 function initNet() {
-  if (!inClaude()) { initPeerNet(); return; }
+  if (!inClaude()) { initRelayNet(); return; }
   useCap("room").then((room) => {
     if (!room) { net.state = "off"; renderOnline(); return; }
     net.room = room; net.state = "ready";
@@ -2237,16 +2198,13 @@ function renderOnline() {
   const ready = net.state === "ready";
   dot.className = "dot " + (net.state === "off" ? "" : ready && net.connected ? "on" : "wait");
   txt.textContent = net.state === "pending" ? "Connecting…"
-    : net.state === "off" ? (net.p2p ? "Online play couldn't start. Check your connection and reload the page."
-      : "Online play isn't available in this view. On claude.ai you need to be signed in and invited to this page; a public link isn't enough.")
-    : !net.connected ? (net.p2p ? "You're offline." : "Reconnecting…")
-    : !net.p2p ? "Online. Open tables appear below as soon as someone starts one."
+    : net.state === "off" ? "Online play isn't available in this view. On claude.ai you need to be signed in and invited to this page; a public link isn't enough."
     : net.invite ? `You're invited to table ${net.invite}. Add your name and tap Join.`
-    : "Online. Start a table and send friends the invite link, or join with a code.";
-  $("net-alt").hidden = net.p2p || net.state !== "off";
-  $("tables-head").hidden = $("table-list").hidden = net.p2p;
-  $("online-note").textContent = net.p2p
-    ? "Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends just open your invite link while you're at the table. No sign-in needed."
+    : !net.connected ? (net.hosted ? "Connecting to the table list…" : "Reconnecting…")
+    : "Online. Open tables appear below as soon as someone starts one.";
+  $("net-alt").hidden = net.hosted || net.state !== "off";
+  $("online-note").textContent = net.hosted
+    ? "Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends open this page and pick your table, or tap your invite link. No sign-in needed."
     : "Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends need this page open on claude.ai at the same time, signed in with access to it.";
   $("host-table").disabled = !ready || net.busy;
   $("join-code").disabled = !ready || net.busy;
@@ -2511,7 +2469,7 @@ function hostBackToLobby() {
 let paintTableSpeed = null;
 function renderTable() {
   $("table-code").textContent = net.code;
-  $("copy-code").textContent = net.p2p ? "Copy invite link" : "Copy code";
+  $("copy-code").textContent = net.hosted ? "Copy invite link" : "Copy code";
   const list = $("table-seats");
   list.textContent = "";
   const L = net.lobby;
@@ -2556,7 +2514,7 @@ function renderTable() {
   const filled = L.seats.filter((st) => st.k !== "x").length;
   startBtn.disabled = filled < 2;
   let note;
-  if (net.isHost) note = filled < 2 ? (net.p2p ? "Waiting for players. Send friends your invite link, or the code. You can also fill seats with CPUs."
+  if (net.isHost) note = filled < 2 ? (net.hosted ? "Waiting for players. Friends can pick your table under Play online, or tap your invite link. You can also fill seats with CPUs. Keep this tab open and in front."
     : "Waiting for players. Friends can pick your table under Play online, or join with the code. You can also fill seats with CPUs.")
     : "Ready when you are. Your lever is Space, or a tap anywhere.";
   else {
@@ -2648,12 +2606,12 @@ function wireUi() {
   $("table-leave").addEventListener("click", () => leaveTable(""));
   $("table-start").addEventListener("click", hostStart);
   $("copy-code").addEventListener("click", () => {
-    const text = net.p2p ? inviteLink() : net.code;
-    if (net.p2p && navigator.share && matchMedia("(pointer: coarse)").matches) {   // phones: straight to WhatsApp and co.
+    const text = net.hosted ? inviteLink() : net.code;
+    if (net.hosted && navigator.share && matchMedia("(pointer: coarse)").matches) {   // phones: straight to WhatsApp and co.
       navigator.share({ title: "Looping Louie", text: "Join my Looping Louie table", url: text }).catch(() => {});
       return;
     }
-    const done = () => toast(net.p2p ? "Invite link copied. Send it to your friends." : "Table code copied");
+    const done = () => toast(net.hosted ? "Invite link copied. Send it to your friends." : "Table code copied");
     try {
       navigator.clipboard.writeText(text).then(done, () => selectCode());
     } catch (e) { selectCode(); }
