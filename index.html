@@ -1,0 +1,2784 @@
+<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Flip your lever, save your chickens. Play Looping Louie online with friends, no sign-in needed."><meta property="og:title" content="Looping Louie"><meta property="og:description" content="Flip your lever, save your chickens. Play online with friends, no sign-in needed."><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%90%94</text></svg>"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Looping Louie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Rubik:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: the whole screen is the tabletop. The farm board is drawn on a canvas,
+   each player's card sits in the corner next to their barn, and menus are
+   cardboard cards from the game box laid over the board. One deliberate look
+   (toy on a wooden table), so no light/dark switch. */
+:root {
+  --table: #563621;
+  --table-deep: #2a190d;
+  --card: #fff2d4;
+  --paper: #fffaf0;
+  --ink: #241a2e;
+  --ink-soft: #5e4c42;
+  --sun: #ffc53a;
+  --sky: #3d9be0;
+  --red: #e5412f;
+  --yellow: #f2b90f;
+  --green: #2fa84c;
+  --purple: #8a55d4;
+  --grey: #b9ad9a;
+  --white: #ffffff;
+  --scrim: rgba(36, 26, 46, 0.42);
+  --font-display: "Luckiest Guy", "Arial Black", Impact, sans-serif;
+  --font-body: "Rubik", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  overflow: hidden;
+  font: 400 15px/1.45 var(--font-body);
+  color: var(--ink);
+  background:
+    repeating-linear-gradient(91deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 11px),
+    repeating-linear-gradient(89deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 23px),
+    radial-gradient(120% 95% at 50% 45%, var(--table) 0%, var(--table-deep) 100%);
+  background-color: var(--table-deep);
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select { font: inherit; color: inherit; }
+
+#stage { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+#board { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---------- HUD ---------- */
+.seat-card {
+  position: absolute; z-index: 3;
+  display: flex; align-items: center; gap: 10px;
+  max-width: calc(50vw - 22px); min-width: 0;
+  padding: 7px 12px 7px 7px;
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 13px;
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  transition: opacity .3s;
+}
+.seat-card[data-pos="tl"] { top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; }
+.seat-card[data-pos="tr"] { top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; flex-direction: row-reverse; padding: 7px 7px 7px 12px; text-align: right; }
+.seat-card[data-pos="br"] { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); right: 12px; flex-direction: row-reverse; padding: 7px 7px 7px 12px; text-align: right; }
+.seat-card[data-pos="bl"] { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 12px; }
+.key {
+  flex: none; width: 38px; height: 38px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--seat); border: 2.5px solid var(--ink);
+  font: 400 21px/1 var(--font-display); color: var(--white);
+  -webkit-text-stroke: 0.09em var(--ink); paint-order: stroke fill;
+  padding-top: 3px;
+}
+.key.small { font-size: 12px; letter-spacing: .04em; }
+.who { min-width: 0; }
+.who .name { font-weight: 800; font-size: 15px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who .sub { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+.flock { display: flex; gap: 2px; flex: none; }
+.flock i {
+  width: 21px; height: 21px; display: block;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5 L1.5 7.5 L6.5 10.5 Z' fill='white' stroke='%23241a2e' stroke-width='1.4' stroke-linejoin='round'/%3E%3Cellipse cx='10.5' cy='15' rx='7.5' ry='5.6' fill='white' stroke='%23241a2e' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='8.6' r='3.9' fill='white' stroke='%23241a2e' stroke-width='1.6'/%3E%3Ccircle cx='14.6' cy='4.4' r='1.5' fill='%23e53b2c'/%3E%3Ccircle cx='16.9' cy='4.2' r='1.4' fill='%23e53b2c'/%3E%3Cpath d='M19.7 8.3 L23 9.3 L19.7 10.5 Z' fill='%23f6a821'/%3E%3Ccircle cx='17' cy='8.2' r='0.9' fill='%23241a2e'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: opacity .3s, transform .3s;
+}
+.flock i.lost { opacity: .18; filter: grayscale(1); transform: rotate(-80deg) translateY(3px); }
+.seat-card.out { opacity: .6; }
+.seat-card.out .name { text-decoration: line-through; text-decoration-thickness: 2px; }
+
+#controls {
+  position: absolute; z-index: 4; left: 50%; transform: translateX(-50%);
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  display: flex; gap: 8px;
+}
+.pill {
+  font: 700 13px/1 var(--font-body);
+  padding: 8px 13px; border-radius: 999px;
+  border: 2.5px solid var(--ink); background: var(--card); color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink); cursor: pointer; white-space: nowrap;
+}
+.pill:active { transform: translate(2px, 2px); box-shadow: none; }
+
+#banner {
+  position: absolute; z-index: 5; left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  font: 400 clamp(64px, 16vw, 150px)/1 var(--font-display);
+  color: var(--sun); -webkit-text-stroke: 0.05em var(--ink); paint-order: stroke fill;
+  text-shadow: 6px 6px 0 var(--ink);
+  pointer-events: none; white-space: nowrap;
+}
+#banner.minor { font-size: clamp(40px, 9vw, 84px); text-shadow: 4px 4px 0 var(--ink); }
+#banner.pop { animation: pop .32s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+#hint, #toast {
+  position: absolute; z-index: 6; left: 50%; transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 9px 16px; border-radius: 999px;
+  background: var(--ink); color: var(--card);
+  font-weight: 600; font-size: 14px; text-align: center;
+  pointer-events: none;
+}
+#hint { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+#toast { top: calc(64px + env(safe-area-inset-top, 0px)); }
+
+/* ---------- Cards / screens ---------- */
+.screen {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; overflow-y: auto;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-inline: 16px;
+  background: var(--scrim);
+  touch-action: pan-y;
+}
+.card {
+  margin: auto; width: min(100%, 600px); min-width: 0;
+  background: var(--card); border: 3px solid var(--ink); border-radius: 20px;
+  box-shadow: 7px 7px 0 var(--ink);
+  padding: clamp(18px, 4.5vw, 30px);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.card.narrow { width: min(100%, 460px); }
+.eyebrow { margin: 0; font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.logo {
+  margin: 0; font: 400 clamp(48px, 12vw, 88px)/.86 var(--font-display);
+  letter-spacing: .01em; color: var(--red);
+  -webkit-text-stroke: 0.055em var(--ink); paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-3deg); transform-origin: left center;
+}
+.logo span { display: block; }
+.card.wide { width: min(100%, 760px); }
+.dress { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 26px; align-items: center; }
+.preview { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+#louie-preview { width: 100%; max-width: 300px; aspect-ratio: 1; height: auto; touch-action: none; cursor: grab; }
+#louie-preview:active { cursor: grabbing; }
+.dress-controls { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.cfg { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cfg .lbl { font-size: 14px; }
+.cfg .lbl span { font-weight: 500; color: var(--ink-soft); }
+.cfg input[type="range"] { width: 100%; accent-color: var(--red); }
+.cfg .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--ink); background: var(--paper); cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.chips button:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.colors button { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--ink); background: var(--sw); cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+.colors button[aria-checked="true"] { box-shadow: 0 0 0 3px var(--card), 0 0 0 6px var(--ink); }
+.colors button:focus-visible { outline: 3px solid var(--sky); outline-offset: 5px; }
+#portrait { cursor: pointer; }
+.hero-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; }
+#portrait { flex: none; width: clamp(96px, 20vw, 160px); aspect-ratio: 1; height: auto; max-width: 40%; transform: rotate(4deg); }
+.logo span + span { color: var(--sun); padding-left: .55em; }
+h2 { margin: 0; font: 400 clamp(28px, 6vw, 38px)/1 var(--font-display); letter-spacing: .01em; text-wrap: balance; }
+h3 { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+p { margin: 0; }
+.lede { font-size: 16.5px; line-height: 1.5; max-width: 60ch; }
+.note { font-size: 13.5px; color: var(--ink-soft); max-width: 62ch; }
+.error { color: var(--red); font-weight: 700; font-size: 14px; }
+.error:empty { display: none; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.actions.end { justify-content: flex-end; }
+
+.btn {
+  font: 400 20px/1 var(--font-display); letter-spacing: .03em;
+  padding: 14px 20px 11px; border-radius: 13px;
+  border: 3px solid var(--ink); background: var(--sun); color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink); cursor: pointer;
+  transition: transform .07s, box-shadow .07s;
+}
+.btn:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.btn.alt { background: var(--paper); }
+.btn.go { background: var(--green); color: var(--white); -webkit-text-stroke: 0.06em var(--ink); paint-order: stroke fill; }
+.btn.small { font-size: 16px; padding: 10px 14px 8px; box-shadow: 3px 3px 0 var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn:focus-visible, .pill:focus-visible, .seg button:focus-visible, .field:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; border-top: 2.5px dashed var(--ink); padding-top: 16px; }
+.rules b { display: block; font: 400 19px/1.1 var(--font-display); letter-spacing: .02em; margin-bottom: 3px; }
+.rules span { font-size: 13.5px; color: var(--ink-soft); }
+.credit { margin-top: -10px; font-size: 11px; letter-spacing: .03em; color: var(--ink-soft); text-align: right; }
+
+.seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: var(--paper); flex: none; }
+.seg button { font-weight: 600; font-size: 13.5px; padding: 8px 11px; background: transparent; border: 0; border-left: 2px solid var(--ink); cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.seg button:disabled { cursor: default; }
+.field {
+  width: 100%; min-width: 0; box-sizing: border-box;
+  padding: 9px 11px; border: 2.5px solid var(--ink); border-radius: 10px;
+  background: var(--paper); font-weight: 500; font-size: 15px;
+}
+select.field { width: auto; padding-right: 8px; cursor: pointer; }
+label.lbl { font-weight: 700; font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.row .lbl { min-width: 54px; }
+
+.seats { display: flex; flex-direction: column; gap: 10px; }
+.seat-row {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  grid-template-areas: "key name type diff";
+  align-items: center; gap: 10px;
+}
+.seat-row .key { grid-area: key; }
+.seat-row .field { grid-area: name; }
+.seat-row .seg { grid-area: type; }
+.seat-row select { grid-area: diff; }
+.seat-row select.invisible { visibility: hidden; }
+
+.status-line { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--ink); background: var(--grey); flex: none; }
+.dot.on { background: var(--green); }
+.dot.wait { background: var(--sun); }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.list li {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 9px 10px 9px 12px; border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper);
+}
+.list li.empty { border-style: dashed; color: var(--ink-soft); font-size: 14px; background: transparent; }
+.list .grow { flex: 1; min-width: 0; }
+.list .t1 { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list .t2 { font-size: 12.5px; color: var(--ink-soft); }
+.swatch { width: 22px; height: 22px; border-radius: 7px; border: 2.5px solid var(--ink); background: var(--seat); flex: none; }
+.join-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.join-row > div { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+.code { font-family: var(--font-display); letter-spacing: .03em; color: var(--sky); -webkit-text-stroke: 0.04em var(--ink); paint-order: stroke fill; }
+#over-card { border-color: var(--ink); }
+#over-title { color: var(--seat, var(--sun)); -webkit-text-stroke: 0.05em var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); font-size: clamp(36px, 9vw, 56px); }
+
+@media (max-width: 680px) {
+  .seat-card { max-width: calc(50vw - 18px); gap: 7px; padding: 5px 9px 5px 5px; }
+  .seat-card[data-pos="tr"], .seat-card[data-pos="br"] { padding: 5px 5px 5px 9px; }
+  .seat-card[data-pos="tl"], .seat-card[data-pos="tr"] { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  .seat-card[data-pos="tl"], .seat-card[data-pos="bl"] { left: 8px; }
+  .seat-card[data-pos="tr"], .seat-card[data-pos="br"] { right: 8px; }
+  .key { width: 32px; height: 32px; font-size: 18px; }
+  .who .sub { display: none; }
+  .flock i { width: 16px; height: 16px; }
+  .rules { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .seat-row { grid-template-columns: 38px minmax(0, 1fr) auto; grid-template-areas: "key name name" ". type diff"; }
+  .seat-row .seg { justify-self: start; }
+  .dress { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  #louie-preview { max-width: 220px; }
+}
+@media (min-width: 1100px) {
+  #scr-menu { padding-inline: 4vw 16px; background: linear-gradient(90deg, var(--scrim), transparent 55%); }
+  #scr-menu .card { margin: auto 0; width: min(480px, 40vw); }
+  #scr-menu .rules { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  #scr-menu .logo { font-size: clamp(46px, 4.4vw, 64px); }
+  #portrait { width: clamp(96px, 8vw, 128px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #banner.pop { animation: none; }
+  .btn, .flock i { transition: none; }
+}
+</style>
+
+<div id="stage">
+  <canvas id="board" role="img" aria-label="Looping Louie's farm: Louie's plane circles a tower and swoops over four barns of chickens"></canvas>
+  <div id="hud" hidden>
+    <div class="seat-card" id="card-0" data-pos="tl" style="--seat: var(--red)"><span class="key" id="card-key-0">Q</span><div class="who"><div class="name" id="card-name-0">Red</div><div class="sub" id="card-sub-0"></div></div><div class="flock" id="card-flock-0"><i></i><i></i><i></i></div></div>
+    <div class="seat-card" id="card-1" data-pos="tr" style="--seat: var(--yellow)"><span class="key" id="card-key-1">P</span><div class="who"><div class="name" id="card-name-1">Yellow</div><div class="sub" id="card-sub-1"></div></div><div class="flock" id="card-flock-1"><i></i><i></i><i></i></div></div>
+    <div class="seat-card" id="card-2" data-pos="br" style="--seat: var(--green)"><span class="key" id="card-key-2">M</span><div class="who"><div class="name" id="card-name-2">Green</div><div class="sub" id="card-sub-2"></div></div><div class="flock" id="card-flock-2"><i></i><i></i><i></i></div></div>
+    <div class="seat-card" id="card-3" data-pos="bl" style="--seat: var(--purple)"><span class="key" id="card-key-3">Z</span><div class="who"><div class="name" id="card-name-3">Purple</div><div class="sub" id="card-sub-3"></div></div><div class="flock" id="card-flock-3"><i></i><i></i><i></i></div></div>
+  </div>
+  <div id="controls" hidden>
+    <button class="pill" id="btn-pause" type="button">Pause</button>
+    <button class="pill" id="btn-sound" type="button" aria-pressed="true">Sound on</button>
+    <button class="pill" id="btn-quit" type="button">Quit</button>
+  </div>
+  <div id="banner" aria-live="polite"></div>
+  <div id="hint" hidden></div>
+  <div id="toast" role="status" hidden></div>
+</div>
+
+<section class="screen" id="scr-menu">
+  <div class="card">
+    <p class="eyebrow">Farmyard flying game · 2 to 4 players</p>
+    <div class="hero-top">
+      <h1 class="logo"><span>Looping</span><span>Louie</span></h1>
+      <canvas id="portrait" role="img" title="Dress up Louie" aria-label="Louie the pilot, dressed the way he is set up in Dress up Louie"></canvas>
+    </div>
+    <p class="lede">Louie is flying circles over the farm, and whenever he swoops low he knocks a chicken off its perch. Flip your lever as he passes to send him looping away. The last farmer with a chicken left wins.</p>
+    <div class="actions">
+      <button class="btn" id="go-local" type="button">Play on this device</button>
+      <button class="btn alt" id="go-online" type="button">Play online</button>
+      <button class="btn alt" id="go-louie" type="button">Dress up Louie</button>
+    </div>
+    <div class="rules">
+      <div><b>Your lever</b><span>Press your key (Q, P, M or Z) or tap your corner of the screen as Louie reaches it.</span></div>
+      <div><b>Short or long</b><span>Tap for a little hop. Hold a moment and he dives onto your neighbour's chickens; hold longer and he loops over them onto the next farmer. Hold too long and he goes all the way up.</span></div>
+      <div><b>Chickens</b><span>Every farmer starts with three. Lose all three and you are out of the game. Louie flies faster every 40 seconds.</span></div>
+    </div>
+    <p class="credit">by Paul</p>
+  </div>
+</section>
+
+<section class="screen" id="scr-local" hidden>
+  <div class="card">
+    <h2>Who's playing?</h2>
+    <div class="seats" id="local-seats"></div>
+    <div class="row"><span class="lbl">Speed</span><div class="seg" id="speed-local" role="group" aria-label="Speed"><button type="button" data-v="chill">Chill</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="wild">Wild</button></div></div>
+    <p class="note">Players sharing a keyboard use Q, P, M and Z. On a tablet, each player taps their own corner. With one player you can also use Space or tap anywhere.</p>
+    <p class="error" id="local-error"></p>
+    <div class="actions end">
+      <button class="btn alt" id="local-back" type="button">Back</button>
+      <button class="btn go" id="local-start" type="button">Start</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="scr-online" hidden>
+  <div class="card">
+    <h2>Play online</h2>
+    <p class="status-line"><span class="dot wait" id="net-dot"></span><span id="net-status">Connecting…</span></p>
+    <p class="note" id="net-alt" hidden>Friends without access can play online at <a href="https://paulbuettner-star.github.io/looping-louie/" target="_blank" rel="noopener">paulbuettner-star.github.io/looping-louie</a>. No sign-in needed.</p>
+    <div class="stack"><label class="lbl" for="nick">Your name</label><input class="field" id="nick" maxlength="16" autocomplete="nickname"></div>
+    <div class="actions"><button class="btn" id="host-table" type="button" disabled>Start a table</button></div>
+    <h3 id="tables-head">Open tables</h3>
+    <ul class="list" id="table-list"><li class="empty">Looking for tables…</li></ul>
+    <div class="join-row">
+      <div><label class="lbl" for="code-input">Join with a table code</label><input class="field" id="code-input" placeholder="louie-ab12" autocomplete="off" spellcheck="false"></div>
+      <button class="btn alt small" id="join-code" type="button" disabled>Join</button>
+    </div>
+    <p class="error" id="online-error"></p>
+    <p class="note" id="online-note">Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends need this page open on claude.ai at the same time, signed in with access to it.</p>
+    <div class="actions end"><button class="btn alt" id="online-back" type="button">Back</button></div>
+  </div>
+</section>
+
+<section class="screen" id="scr-table" hidden>
+  <div class="card">
+    <div class="row" style="justify-content: space-between">
+      <h2>Table <span class="code" id="table-code"></span></h2>
+      <button class="pill" id="copy-code" type="button">Copy code</button>
+    </div>
+    <ul class="list" id="table-seats"></ul>
+    <div class="row"><span class="lbl">Speed</span><div class="seg" id="speed-table" role="group" aria-label="Speed"><button type="button" data-v="chill">Chill</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="wild">Wild</button></div></div>
+    <p class="note" id="table-note"></p>
+    <div class="actions end">
+      <button class="btn alt" id="table-leave" type="button">Leave table</button>
+      <button class="btn go" id="table-start" type="button">Start game</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="scr-louie" hidden>
+  <div class="card wide">
+    <h2>Dress up Louie</h2>
+    <div class="dress">
+      <div class="preview">
+        <canvas id="louie-preview" role="img" aria-label="Preview of Louie with the hat, hair, beard and glasses picked here"></canvas>
+        <p class="note">Drag him to turn him round.</p>
+      </div>
+      <div class="dress-controls">
+        <div class="cfg">
+          <span class="lbl" id="cfg-hat-label">Hat</span>
+          <div class="chips" id="cfg-hat" role="group" aria-labelledby="cfg-hat-label"><button type="button" data-v="beanie">Beanie</button><button type="button" data-v="cap">Pilot cap</button><button type="button" data-v="base">Baseball cap</button><button type="button" data-v="none">No hat</button></div>
+        </div>
+        <div class="cfg">
+          <span class="lbl" id="cfg-hair-label">Hair</span>
+          <div class="chips" id="cfg-hair" role="group" aria-labelledby="cfg-hair-label"><button type="button" data-v="wavy">Wavy</button><button type="button" data-v="punk">Punk</button><button type="button" data-v="bald">Bald</button></div>
+        </div>
+        <div class="cfg">
+          <label class="lbl" for="cfg-beard">Beard: <span id="cfg-beard-name"></span></label>
+          <input type="range" id="cfg-beard" min="0" max="4" step="1">
+          <div class="scale" aria-hidden="true"><span>None</span><span>Full beard</span></div>
+        </div>
+        <div class="cfg">
+          <span class="lbl" id="cfg-glasses-label">Glasses: <span id="cfg-glasses-name"></span></span>
+          <div class="colors" id="cfg-glasses" role="radiogroup" aria-labelledby="cfg-glasses-label"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note" id="cfg-note"></p>
+    <div class="actions end">
+      <button class="btn alt" id="cfg-reset" type="button">Reset look</button>
+      <button class="btn go" id="cfg-done" type="button">Done</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="scr-pause" hidden>
+  <div class="card narrow">
+    <h2>Paused</h2>
+    <p class="note">Louie is circling the tower, waiting for you.</p>
+    <div class="actions end">
+      <button class="btn alt" id="pause-quit" type="button">Quit to menu</button>
+      <button class="btn go" id="pause-resume" type="button">Resume</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="scr-over" hidden>
+  <div class="card narrow" id="over-card">
+    <h2 id="over-title">Red wins!</h2>
+    <p class="lede" id="over-sub"></p>
+    <div class="actions end" id="over-actions"></div>
+  </div>
+</section>
+
+<script>
+(function () {
+"use strict";
+
+/*<sim>*/
+/* ======================================================================
+   Game model. Pure and deterministic: the same inputs give the same flight,
+   so an online host can rewind and replay when a remote lever hit arrives late.
+   Louie hangs on a stiff arm hinged at the top of the tower, like the toy.
+   A is the arm's angle around the tower; e is how far the arm is raised
+   (E_REST: Louie skimming the board, PI/2: straight up above the tower).
+   Heights are in "Louie units": below CHICK_H he knocks chickens, below
+   REACH a lever can still hit him.
+   ====================================================================== */
+const TAU = Math.PI * 2;
+const DT = 1 / 240;            // fixed physics step
+const ARM_ZP = 1.02;           // hinge height above the board, in board radii
+const ARM_ZU = 0.28;           // one Louie height unit, in board radii
+const ARM_L = Math.hypot(1, ARM_ZP);
+const E_REST = -Math.atan2(ARM_ZP, 1);
+const K_GRAV = 6.0;            // how hard the arm swings back down
+const REACH = 1.5;            // the lever can still reach him below this height
+const CHICK_H = 0.42;
+const PAD_OFF = -0.34;         // lever sits just before the barn
+const CHICK_OFF = [-0.17, -0.05, 0.07];
+const TAP_MIN = 0.16;          // a quick tap still flicks the lever up this long
+const MAX_HOLD = 0.55;         // hold it longer and the lever gives way
+const LATE = 0.14;             // radians past the lever where a late flick still catches him (the first chicken is at 0.17)
+const TOO_HARD = 0.36;         // held this long when Louie arrives: all the way up
+const DROP = 0.12;             // time the lever takes to fall back down
+const ROLLBACK_STEPS = 180;    // 0.75 s: how late a remote hit may arrive
+const HIST_MAX = 200;
+const START_V = 4.5;
+const LOOP_V = 6.4;
+const SPEEDS = { chill: 1.5, normal: 1.9, wild: 2.4 };
+const FASTER_EVERY = 40;       // while nobody has won, the motor speeds up every 40 s of play
+const FASTER_BY = 0.15;        // each speed-up adds 15% of the starting speed
+const FASTER_MAX = 5;          // at most five speed-ups (+75%)
+const FASTER_EASE = 1.5;       // seconds the motor takes to wind up to the next step
+const DIFF = {                 // timing spread, chance to miss, and how often a CPU hops / dives onto the next / jumps one / overdoes it
+  easy:   { sigma: 0.08,  miss: 0.26, mix: [0.46, 0.35, 0.17, 0.02] },
+  normal: { sigma: 0.05,  miss: 0.11, mix: [0.26, 0.43, 0.29, 0.02] },
+  hard:   { sigma: 0.025, miss: 0.05, mix: [0.12, 0.41, 0.44, 0.03] },
+}
+const HOLD_FOR = [0.03, 0.17, 0.3, 0.4];    // how long before Louie arrives a CPU starts holding: hop, onto the next, over one, too hard
+const SEAT_ANGLES = [-0.75 * Math.PI, -0.25 * Math.PI, 0.25 * Math.PI, 0.75 * Math.PI];
+
+/* How many speed-ups have happened after gt seconds of play (eased, so the motor winds up). */
+function speedUps(gt) {
+  const n = Math.floor(gt / FASTER_EVERY);
+  if (n < 1) return 0;
+  return Math.min(FASTER_MAX, n - 1 + Math.min(1, (gt - n * FASTER_EVERY) / FASTER_EASE));
+}
+function omega(gt, base) {
+  return base * (1 + FASTER_BY * speedUps(gt)) * (1 + 0.10 * Math.sin(0.83 * gt) + 0.05 * Math.sin(2.1 * gt + 1.3));
+}
+/* The lever flicks up the moment it is pressed and stays up while held (a tap
+   still flicks it up for TAP_MIN). The longer it has been held when Louie
+   arrives, the harder he is hit; held too long and he goes all the way up. */
+function leverUp(x) { return x < 0.03 ? 0.75 * x / 0.03 : 0.75 + 0.25 * Math.min(1, (x - 0.03) / 0.3); }
+function lever(now, lp, lr) {
+  const p = now - lp;
+  if (!(p >= 0)) return { lift: 0, held: false, hold: 0, ready: true };
+  const end = Math.min(lr >= lp ? Math.max(lr, lp + TAP_MIN) : Infinity, lp + MAX_HOLD);
+  if (now <= end) return { lift: leverUp(p), held: true, hold: p, ready: false };
+  const f = (now - end) / DROP;
+  return { lift: f >= 1 ? 0 : leverUp(end - lp) * (1 - f), held: false, hold: 0, ready: f >= 0.5 };
+}
+/* How hard a hit is, from how long the lever has been held when Louie arrives:
+   a tap is a short hop that lands before the next player's lever (band 0); a short
+   hold sails over that lever and dives onto the next player's chickens (band 1);
+   a longer hold clears the next player and dives onto the chickens of the one
+   after (band 2); held too long he goes all the way up (band 3).
+   d is where he should come down, in seats from the lever (the next player's
+   chickens sit at 1.11 to 1.26). */
+const D_HOP = 0.8, D_NEXT = 1.2, D_OVER = 2.2;
+function hitBand(lv, h) {
+  if (!lv.held) return { band: 0, d: D_HOP };
+  const x = lv.hold;
+  if (x >= TOO_HARD && h < 0.6) return { band: 3, d: 0 };
+  let d;
+  if (x < 0.08) d = D_HOP;
+  else if (x < 0.12) d = D_HOP + (D_NEXT - D_HOP) * (x - 0.08) / 0.04;
+  else if (x < 0.22) d = D_NEXT;
+  else if (x < 0.27) d = D_NEXT + (D_OVER - D_NEXT) * (x - 0.22) / 0.05;
+  else d = D_OVER;
+  return { band: d >= 1.7 ? 2 : d >= 1.05 ? 1 : 0, d };
+}
+function hOf(e) { return (ARM_ZP + ARM_L * Math.sin(e)) / ARM_ZU; }
+function rhoOf(e) { return ARM_L * Math.cos(e); }
+function vhOf(e, ve) { return ARM_L * Math.cos(e) * ve / ARM_ZU; }
+function veFor(v, e) { return v * ARM_ZU / (ARM_L * Math.max(0.25, Math.cos(e))); }
+/* Height after t seconds of free swing (99 if he goes over the top first). */
+function predictH(e, ve, t) {
+  const dt = 1 / 120;
+  for (let i = Math.ceil(t / dt); i > 0; i--) {
+    if (e <= E_REST && ve <= 0) return 0;
+    ve -= K_GRAV * Math.cos(e) * dt; e += ve * dt;
+    if (e <= E_REST) { e = E_REST; ve = 0; }
+    if (e > Math.PI / 2) return 99;
+  }
+  return hOf(e);
+}
+/* How long Louie stays up (until he sinks to height lvl again) if the arm is launched with speed ve.
+   Same steps as stepSim, so the aim matches the real flight. */
+const LOW_H = 0.35;
+function airTime(e, ve, lvl) {
+  let up = hOf(e) > lvl;
+  for (let i = 1; i <= 1440; i++) {
+    ve -= K_GRAV * Math.cos(e) * DT; e += ve * DT;
+    if (e > Math.PI / 2) return Infinity;
+    const h = hOf(e);
+    if (h > lvl) up = true;
+    else if (up || ve <= 0) return i * DT;
+  }
+  return 1440 * DT;
+}
+/* Seconds the motor takes to carry him a radians round the tower from time gt
+   (counts the wobble and any speed-up during the flight). */
+function flightTime(a, gt, base) {
+  const dt = 1 / 120;
+  let done = 0, t = 0;
+  while (done < a && t < 6) { done += omega(gt + t + dt / 2, base) * dt; t += dt; }
+  return t;
+}
+/* Arm speed that keeps him above height lvl for T seconds. */
+function solveVe(e, T, lvl) {
+  let lo = 0.2, hi = 0.995 * Math.sqrt(2 * K_GRAV * (1 - Math.sin(e)));   // stay just short of going over
+  if (airTime(e, hi, lvl) <= T) return hi;
+  for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (airTime(e, mid, lvl) < T) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
+const VE_OVER = 4.9;           // arm speed that always carries him over the top
+const DIVE_IN = 0.08;          // a dive onto the next farmer's chickens drops back within reach this far past their lever, so it can still be saved
+/* Arm speed for a hit: aimed so he comes down d seats on from the lever (into: how far past the lever he was hit). */
+function launch(lv, h, e, gt, base, into) {
+  const b = hitBand(lv, h);
+  if (b.band === 3) return { ve: VE_OVER, band: 3 };
+  let ve = solveVe(e, flightTime(b.d * Math.PI / 2 - into, gt, base), LOW_H);
+  if (b.d > 1 && b.d < 1.35) ve = Math.min(ve, solveVe(e, flightTime(Math.PI / 2 + DIVE_IN - into, gt, base), REACH));
+  return { ve, band: b.band };
+}
+function seatChicks(al, s) { return (al >> (s * 3)) & 7; }
+function bits3(x) { return (x & 1) + ((x >> 1) & 1) + ((x >> 2) & 1); }
+function fullMask(inGame) { let m = 0; for (let s = 0; s < 4; s++) if (inGame & (1 << s)) m |= 7 << (s * 3); return m; }
+function newState(inGame, A) {
+  return { n: 0, gt: 0, A, e: E_REST, ve: 0, fl: 0, al: fullMask(inGame), hp: [-1e6, -1e6, -1e6, -1e6], kp: [-1e6, -1e6, -1e6, -1e6], hb: [0, 0, 0, 0], lp: [-9, -9, -9, -9], lr: [-9, -9, -9, -9] };
+}
+function cloneState(S) {
+  return { n: S.n, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, hp: S.hp.slice(), kp: S.kp.slice(), hb: S.hb.slice(), lp: S.lp.slice(), lr: S.lr.slice() };
+}
+function gauss(rng) { return Math.sqrt(-2 * Math.log(1 - rng() * 0.999999)) * Math.cos(TAU * rng()); }
+
+/* One physics step. cfg.remote[s] seats never collide locally; they only
+   hit through a claim {k: pass number, v: launch speed} sent by that player. */
+function stepSim(S, cfg, fx) {
+  const A0 = S.A;
+  let A1 = A0 + omega(S.gt, cfg.base) * DT;
+  let e = S.e, ve = S.ve, over = false;
+  if (e > E_REST || ve > 0) {
+    ve -= K_GRAV * Math.cos(e) * DT; e += ve * DT;
+    if (e <= E_REST) { e = E_REST; ve = 0; }
+    else if (e > Math.PI / 2) {            // over the top: he comes down on the far side
+      e = Math.PI - e; ve = -ve; A1 += Math.PI; over = true;
+    }
+  }
+  S.A = A1; S.e = e; S.ve = ve; S.gt += DT; S.n++;
+  if (over) { S.fl++; return; }            // up above the tower nothing on the board can touch him
+  const h = hOf(e);
+  for (let s = 0; s < 4; s++) {
+    if (!(cfg.inGame & (1 << s)) || !seatChicks(S.al, s)) continue;
+    const a = SEAT_ANGLES[s];
+    const P = a + PAD_OFF;
+    const k = Math.floor((A1 - P) / TAU);
+    const into = A1 - P - TAU * k;               // how far past the lever he is on this pass
+    if (into < LATE && S.hp[s] !== k) {
+      if (cfg.remote[s]) {
+        const c = cfg.claims[s];
+        if (c && c.k === k && into >= c.a - 1e-6 && h < REACH + 0.25) {
+          S.ve = Math.max(S.ve, c.v); S.hp[s] = k; S.kp[s] = k; S.hb[s] = c.b;
+          if (fx) fx.hit(s, c.v, k, c.b, into);
+        }
+      } else {
+        const lv = lever(S.gt, S.lp[s], S.lr[s]);
+        const need = 0.25 + Math.max(0, -vhOf(S.e, S.ve) - 6) * 0.06;   // a fast dive is a little harder to catch
+        if (lv.lift >= need && h < REACH) {
+          const L = launch(lv, h, S.e, S.gt, cfg.base, into);
+          S.ve = Math.max(S.ve, L.ve); S.hp[s] = k; S.kp[s] = k; S.hb[s] = L.band;   // a hit also saves this pass's chickens
+          if (fx) fx.hit(s, L.ve, k, L.band, into);
+        }
+      }
+    }
+    for (let j = 0; j < 3; j++) {
+      const bit = 1 << (s * 3 + j);
+      if (!(S.al & bit)) continue;
+      const C = a + CHICK_OFF[j];
+      const kc = Math.floor((A1 - C) / TAU);
+      if (kc > Math.floor((A0 - C) / TAU) && S.kp[s] !== kc && hOf(S.e) < CHICK_H) {
+        S.al &= ~bit; S.kp[s] = kc; S.ve = Math.max(S.ve, veFor(1.4, S.e));
+        if (fx && fx.knock) fx.knock(s, j);
+      }
+    }
+  }
+}
+
+/* A match as run by whoever owns the game (this device, or an online host). */
+class Match {
+  constructor(opt) {
+    this.seats = opt.seats.map((x) => Object.assign({}, x));
+    let inGame = 0;
+    this.seats.forEach((x, s) => { if (x.type !== "off") inGame |= 1 << s; });
+    this.inGame = inGame;
+    this.speed = SPEEDS[opt.speed] ? opt.speed : "normal";
+    this.cfg = { base: SPEEDS[this.speed], inGame, remote: this.seats.map((x) => x.type === "remote"), claims: [null, null, null, null] };
+    this.rng = opt.rng || Math.random;
+    const order = [0, 1, 2, 3].filter((s) => inGame & (1 << s));
+    const s0 = order.length ? order[Math.floor(this.rng() * order.length)] : 0;
+    this.S = newState(inGame, SEAT_ANGLES[s0] + 0.45);
+    this.hist = [cloneState(this.S)];
+    this.pressLog = [];
+    this.commitSteps = this.cfg.remote.some(Boolean) ? ROLLBACK_STEPS : 0;
+    this.committed = this.S.al;
+    this.cd = opt.countdown == null ? 3 : opt.countdown;
+    this.status = this.cd > 0 ? "countdown" : "play";
+    if (this.status === "play") this.S.ve = veFor(START_V, E_REST);
+    this.acc = 0;
+    this.winner = -1;
+    this.ack = [0, 0, 0, 0];
+    this.remotePress = [-9, -9, -9, -9];
+    this.remoteRelease = [-9, -9, -9, -9];
+    this.ai = [0, 1, 2, 3].map(() => ({ planned: null, pressAt: null, releaseAt: null, pressed: null, roll: null }));
+    this.onHit = null;
+    this.liveFx = { hit: (s, v, k, b, a) => { if (this.onHit) this.onHit(s, v, b, a); } };
+  }
+  update(dt) {
+    if (this.status === "countdown") {
+      this.cd -= dt;
+      if (this.cd <= 0) { this.cd = 0; this.status = "play"; this.S.ve = veFor(START_V, E_REST); }
+      return;
+    }
+    if (this.status !== "play") return;
+    this.acc += Math.min(dt, 0.1);
+    this.think();
+    let guard = 0;
+    while (this.acc >= DT && guard++ < 60) { this.advance(); this.acc -= DT; }
+    this.commit();
+  }
+  advance() {
+    const S = this.S;
+    for (let s = 0; s < 4; s++) {
+      const a = this.ai[s];
+      if (a.pressAt != null && S.gt >= a.pressAt) { a.pressAt = null; a.pressed = a.planned; this.press(s); }
+      if (a.releaseAt != null && S.gt >= a.releaseAt) { a.releaseAt = null; this.release(s); }
+    }
+    stepSim(S, this.cfg, this.liveFx);
+    this.hist.push(cloneState(S));
+    if (this.hist.length > HIST_MAX) this.hist.shift();
+    const oldest = this.hist[0].n;
+    while (this.pressLog.length && this.pressLog[0].n < oldest) this.pressLog.shift();
+  }
+  press(s) {
+    const S = this.S;
+    if (this.status !== "play" || this.cfg.remote[s] || !(this.inGame & (1 << s)) || !seatChicks(S.al, s)) return false;
+    if (!lever(S.gt, S.lp[s], S.lr[s]).ready) return false;
+    S.lp[s] = S.gt; S.lr[s] = -1e9;
+    this.pressLog.push({ n: S.n, s, up: false });
+    return true;
+  }
+  release(s) {
+    const S = this.S;
+    if (this.cfg.remote[s] || !(S.lr[s] < S.lp[s])) return false;
+    S.lr[s] = S.gt;
+    this.pressLog.push({ n: S.n, s, up: true });
+    return true;
+  }
+  remotePressed(s) { this.remotePress[s] = this.S.gt; this.remoteRelease[s] = -1e9; }
+  remoteReleased(s) { if (this.remoteRelease[s] < this.remotePress[s]) this.remoteRelease[s] = this.S.gt; }
+  leverOf(s) {
+    const S = this.S;
+    return this.cfg.remote[s] ? lever(S.gt, this.remotePress[s], this.remoteRelease[s]) : lever(S.gt, S.lp[s], S.lr[s]);
+  }
+  makeCpu(s) {
+    this.seats[s] = { type: "cpu", d: "normal" };
+    this.cfg.remote[s] = false; this.cfg.claims[s] = null;
+  }
+  think() {
+    const S = this.S;
+    for (let s = 0; s < 4; s++) {
+      const seat = this.seats[s];
+      if (seat.type !== "cpu" || !(this.inGame & (1 << s)) || !seatChicks(S.al, s)) continue;
+      const ai = this.ai[s];
+      const P = SEAT_ANGLES[s] + PAD_OFF;
+      const k = Math.floor((S.A - P) / TAU) + 1;
+      if (ai.planned === k) continue;
+      const w = omega(S.gt, this.cfg.base);
+      const tArr = (P + TAU * k - S.A) / w;
+      if (tArr > 0.6) continue;
+      // diving onto the chickens he can still be caught past the lever, once he drops within reach
+      const tLast = tArr + 0.8 * LATE / w;
+      let tHit = tArr;
+      while (tHit < tLast && predictH(S.e, S.ve, tHit) > REACH * 0.92) tHit += 0.01;
+      if (tHit >= tLast) { if (tArr < 0.12) ai.planned = k; continue; }
+      ai.planned = k;
+      if (!ai.roll || ai.roll.k !== k) {      // the dice for this pass, kept if a late online hit makes the CPU look again
+        const d = DIFF[seat.d] || DIFF.normal;
+        const miss = this.rng() < d.miss;
+        let want = 0, err = 0;
+        if (!miss) {
+          let u = this.rng();
+          while (want < 3 && u > d.mix[want]) { u -= d.mix[want]; want++; }
+          err = gauss(this.rng) * d.sigma;
+        }
+        ai.roll = { k, miss, want, err };
+      }
+      const { miss, want, err } = ai.roll;
+      if (miss) continue;
+      const arrive = S.gt + tHit;
+      if (want === 0) { ai.pressAt = arrive - 0.03 + err; ai.releaseAt = ai.pressAt + 0.05; }      // a quick tap
+      else { ai.pressAt = arrive - HOLD_FOR[want] + err; ai.releaseAt = arrive + 0.06 + Math.abs(err); }
+    }
+  }
+  /* Chickens only fall for good once a knock is older than the rollback window. */
+  commit() {
+    const idx = this.hist.length - 1 - this.commitSteps;
+    const cm = this.hist[Math.max(0, idx)].al;
+    if (cm === this.committed) return;
+    this.committed = cm;
+    const alive = [0, 1, 2, 3].filter((s) => (this.inGame & (1 << s)) && seatChicks(cm, s));
+    if (alive.length <= 1) { this.status = "over"; this.winner = alive.length ? alive[0] : -1; }
+  }
+  /* A remote player says "my lever hit Louie on pass k at speed v". */
+  claim(s, seq, k, v, b, a) {
+    if (!this.cfg.remote[s] || !(seq > this.ack[s])) return false;
+    this.ack[s] = seq;
+    if (this.status !== "play" || !Number.isInteger(k) || !Number.isFinite(v)) return false;
+    b = Number.isInteger(b) && b >= 0 && b <= 3 ? b : 0;
+    v = b === 3 ? VE_OVER : Math.min(4.6, Math.max(0.2, v));
+    a = Number.isFinite(a) ? Math.min(LATE - 1e-4, Math.max(0, a)) : 0;
+    this.cfg.claims[s] = { k, v, b, a };
+    const S = this.S;
+    const Ac = SEAT_ANGLES[s] + PAD_OFF + TAU * k + a;
+    if (S.A < Ac) return true;            // Louie is not there yet on this screen
+    if (S.hp[s] === k) return true;
+    let i = this.hist.length - 1;
+    while (i >= 0 && this.hist[i].A >= Ac) i--;
+    if (i < 0 || S.n - this.hist[i].n > ROLLBACK_STEPS) return false;
+    const R = cloneState(this.hist[i]);
+    const hist = this.hist.slice(0, i + 1);
+    const log = this.pressLog;
+    let pi = 0;
+    while (pi < log.length && log[pi].n < R.n) pi++;
+    while (R.n < S.n) {
+      while (pi < log.length && log[pi].n === R.n) { const q = log[pi]; if (q.up) R.lr[q.s] = R.gt; else { R.lp[q.s] = R.gt; R.lr[q.s] = -1e9; } pi++; }
+      stepSim(R, this.cfg, null);
+      hist.push(cloneState(R));
+    }
+    if (R.hp[s] !== k) return false;
+    this.S = R; this.hist = hist;
+    // CPUs that have not pressed yet look again at the corrected flight (a dive may now be coming at them)
+    for (const ai of this.ai) if (ai.pressed !== ai.planned) { ai.planned = null; ai.pressAt = null; ai.releaseAt = null; }
+    if (this.onHit) this.onHit(s, v, b);
+    return true;
+  }
+  snapshot(round) {
+    const S = this.S, r4 = (x) => Math.round(x * 1e4) / 1e4;
+    return {
+      r: round, st: this.status, cd: r4(this.cd), t: r4(S.gt), A: Math.round(S.A * 1e6) / 1e6,
+      e: Math.round(S.e * 1e6) / 1e6, ve: Math.round(S.ve * 1e6) / 1e6, fl: S.fl, al: S.al, cm: this.committed, hp: S.hp.slice(), kp: S.kp.slice(),
+      lv: [0, 1, 2, 3].map((s) => Math.round(this.leverOf(s).lift * 100)),
+      hd: [0, 1, 2, 3].map((s) => { const l = this.leverOf(s); return l.held ? Math.round(l.hold * 1000) : 0; }),
+      ack: this.ack.slice(), hb: S.hb.slice(), w: this.winner, b: this.speed, g: this.inGame,
+    };
+  }
+}
+
+/* An online player's copy of the host's game: follows the host's snapshots,
+   predicts its own lever hit at once, and tells the host about it. */
+class Mirror {
+  constructor() {
+    this.snap = null; this.offset = null; this.presses = []; this.seq = 0;
+    this.pending = null; this.anchor = null; this.claimed = new Set(); this.mySeat = -1; this.round = null;
+  }
+  onSnap(snap, now) {
+    const newRound = snap.r !== this.round;
+    if (newRound) { this.presses = []; this.pending = null; this.anchor = null; this.claimed.clear(); this.round = snap.r; }
+    if (newRound || (this.snap && this.snap.st !== "play" && snap.st === "play")) this.offset = null;
+    this.snap = snap;
+    if (snap.st === "play") {
+      const sample = now - snap.t;
+      if (this.offset == null || sample < this.offset) this.offset = sample;
+      else this.offset += (sample - this.offset) * 0.004;
+    }
+    if (this.pending && this.mySeat >= 0 && snap.ack[this.mySeat] >= this.pending.seq) this.pending = null;
+    // a newer snapshot can be the prediction base as long as Louie hasn't reached my lever in it yet
+    if (this.anchor && this.mySeat >= 0 && snap.st === "play") {
+      const P = SEAT_ANGLES[this.mySeat] + PAD_OFF;
+      if (Math.floor((snap.A - P) / TAU) < this.anchor.k) this.anchor.base = snap;   // still before my lever on that pass
+    }
+  }
+  hostTime(now) {
+    if (!this.snap) return 0;
+    if (this.offset == null || this.snap.st !== "play") return this.snap.t;
+    return Math.max(this.snap.t, now - this.offset);
+  }
+  press(now) {
+    const snap = this.snap;
+    if (!snap || snap.st !== "play" || this.mySeat < 0 || !seatChicks(snap.cm, this.mySeat)) return 0;
+    const t = this.hostTime(now);
+    if (!this.ownLever(t).ready) return 0;
+    const seq = ++this.seq;
+    this.presses.push({ seq, t, tr: null });
+    while (this.presses.length > 8) this.presses.shift();
+    // Keep predicting from a snapshot taken before Louie reaches my lever until its hit
+    // window is over, so a newer snapshot can't jump past the moment they meet.
+    const P = SEAT_ANGLES[this.mySeat] + PAD_OFF;
+    const k = Math.floor(((this.lastA == null ? snap.A : this.lastA) - P) / TAU) + 1;
+    const until = t + MAX_HOLD + DROP + 0.05;
+    if (!this.anchor) this.anchor = { base: snap, k, until };
+    else { this.anchor.k = k; this.anchor.until = until; }
+    return seq;
+  }
+  release(now) {
+    const last = this.presses[this.presses.length - 1];
+    if (!last || last.tr != null) return 0;
+    last.tr = Math.max(last.t, this.hostTime(now));
+    return last.seq;
+  }
+  ownLever(tau) {
+    const last = this.presses[this.presses.length - 1];
+    return last ? lever(tau, last.t, last.tr == null ? -1e9 : last.tr) : lever(tau, -9, -9);
+  }
+  predict(now, onClaim) {
+    const snap = this.snap;
+    if (this.pending && now - this.pending.t0 > 1.2) this.pending = null;
+    const tau = this.hostTime(now);
+    if (this.anchor && tau > this.anchor.until) this.anchor = null;
+    const base = this.pending ? this.pending.base : this.anchor ? this.anchor.base : snap;
+    const R = { n: 0, gt: base.t, A: base.A, e: base.e, ve: base.ve, fl: base.fl, al: base.al, hp: base.hp.slice(), kp: base.kp.slice(), hb: base.hb.slice(), lp: [-9, -9, -9, -9], lr: [-9, -9, -9, -9] };
+    if (snap.st !== "play" || base.st !== "play") return R;
+    const me = this.mySeat;
+    const steps = Math.min(360, Math.max(0, Math.floor((tau - base.t) / DT)));
+    const cfg = { base: SPEEDS[base.b] || SPEEDS.normal, inGame: base.g, remote: [0, 1, 2, 3].map((s) => s !== me), claims: [null, null, null, null] };
+    const ev = [];
+    for (const q of this.presses) { ev.push({ t: q.t, seq: q.seq, up: false }); if (q.tr != null) ev.push({ t: q.tr, seq: q.seq, up: true }); }
+    ev.sort((x, y) => x.t - y.t || (x.up ? 1 : -1));
+    let pi = 0, curSeq = 0;
+    const fx = me < 0 ? null : {
+      hit: (s, v, k, b, a) => {
+        if (s !== me || !curSeq || this.claimed.has(curSeq)) return;
+        this.claimed.add(curSeq);
+        this.pending = { seq: curSeq, base, t0: now };
+        this.anchor = null;
+        onClaim(curSeq, k, v, b, a);
+      },
+    };
+    for (let i = 0; i < steps; i++) {
+      while (pi < ev.length && ev[pi].t <= R.gt) {
+        const q = ev[pi++];
+        if (me < 0) continue;
+        if (q.up) R.lr[me] = q.t; else { R.lp[me] = q.t; R.lr[me] = -1e9; curSeq = q.seq; }
+      }
+      stepSim(R, cfg, fx);
+    }
+    this.lastA = R.A;
+    return R;
+  }
+}
+/*</sim>*/
+
+/* ======================================================================
+   Settings
+   ====================================================================== */
+const STORE_KEY = "looping-louie.v1";
+const KEYS = ["q", "p", "m", "z"];
+const SEAT_NAMES = ["Red", "Yellow", "Green", "Purple"];
+const SEAT_TOKENS = ["red", "yellow", "green", "purple"];
+const DIFF_LABEL = { easy: "Easy", normal: "Normal", hard: "Hard" };
+const CODE_RE = /^louie-[a-z0-9]{4}$/;
+
+function cleanName(x, fallback) {
+  const s = String(x == null ? "" : x).replace(/[\u0000-\u001f\u007f-\u009f­​-‏‪-‮⁠-⁯﻿]/g, "").trim().slice(0, 16);
+  return s || fallback;
+}
+const settings = {
+  seats: [
+    { type: "human", d: "normal", name: "Red" },
+    { type: "cpu", d: "normal", name: "Yellow" },
+    { type: "cpu", d: "normal", name: "Green" },
+    { type: "cpu", d: "hard", name: "Purple" },
+  ],
+  speed: "normal",
+  nick: "",
+  sound: true,
+  louie: { hat: "beanie", hair: "wavy", beard: 3, glasses: "lime" },
+};
+function mergeSettings(o) {
+  if (!o || typeof o !== "object") return;
+  if (Array.isArray(o.seats)) o.seats.slice(0, 4).forEach((x, s) => {
+    if (!x || typeof x !== "object") return;
+    const st = settings.seats[s];
+    if (["human", "cpu", "off"].includes(x.type)) st.type = x.type;
+    if (DIFF[x.d]) st.d = x.d;
+    if (typeof x.name === "string") st.name = cleanName(x.name, SEAT_NAMES[s]);
+  });
+  if (SPEEDS[o.speed]) settings.speed = o.speed;
+  if (typeof o.nick === "string") settings.nick = cleanName(o.nick, "");
+  if (typeof o.sound === "boolean") settings.sound = o.sound;
+  if (o.louie) settings.louie = cleanLook(o.louie);
+}
+function loadSettings() { try { const raw = localStorage.getItem(STORE_KEY); if (raw) mergeSettings(JSON.parse(raw)); } catch (e) { /* storage unavailable */ } }
+function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* storage unavailable */ } }
+
+/* ======================================================================
+   Sound: a tiny synth, started from the first click
+   ====================================================================== */
+const Sound = {
+  ac: null, out: null, on: true, motor: null, motorGain: null, noiseBuf: null,
+  ensure() {
+    if (this.ac) { if (this.ac.state === "suspended") this.ac.resume().catch(() => {}); return true; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    try { this.ac = new AC(); } catch (e) { return false; }
+    const ac = this.ac;
+    this.out = ac.createGain(); this.out.gain.value = this.on ? 0.55 : 0; this.out.connect(ac.destination);
+    const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = 50;
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 240;
+    const g = ac.createGain(); g.gain.value = 0;
+    o.connect(f); f.connect(g); g.connect(this.out); o.start();
+    this.motor = o; this.motorGain = g;
+    const len = Math.floor(ac.sampleRate * 0.2);
+    this.noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = this.noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return true;
+  },
+  setOn(v) { this.on = v; if (this.out) this.out.gain.setTargetAtTime(v ? 0.55 : 0, this.ac.currentTime, 0.02); },
+  motorLevel(level, w) {
+    if (!this.ac) return;
+    const t = this.ac.currentTime;
+    this.motorGain.gain.setTargetAtTime(level, t, 0.12);
+    this.motor.frequency.setTargetAtTime(36 + w * 9, t, 0.12);
+  },
+  tone(type, f0, f1, dur, vol, delay) {
+    if (!this.ac) return;
+    const t = this.ac.currentTime + (delay || 0);
+    const o = this.ac.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = this.ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.out); o.start(t); o.stop(t + dur + 0.05);
+    return o;
+  },
+  noise(dur, freq, vol) {
+    if (!this.ac) return;
+    const t = this.ac.currentTime;
+    const src = this.ac.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = this.ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 1.2;
+    const g = this.ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.out); src.start(t); src.stop(t + dur + 0.02);
+  },
+  whack() { this.noise(0.05, 1900, 0.35); this.tone("triangle", 200, 80, 0.09, 0.35); },
+  boing(v) { this.tone("sine", 170, 380 + v * 75, 0.24, 0.32); this.tone("square", 85, 190, 0.12, 0.05); },
+  squawk() {
+    if (!this.ac) return;
+    this.tone("square", 560, 420, 0.06, 0.09);
+    this.tone("square", 610, 440, 0.06, 0.09, 0.09);
+    const t = this.ac.currentTime + 0.2;
+    const o = this.ac.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(700, t); o.frequency.linearRampToValueAtTime(980, t + 0.1); o.frequency.linearRampToValueAtTime(560, t + 0.32);
+    const lfo = this.ac.createOscillator(); lfo.frequency.value = 28;
+    const lg = this.ac.createGain(); lg.gain.value = 70; lfo.connect(lg); lg.connect(o.frequency);
+    const f = this.ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 2600;
+    const g = this.ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    o.connect(f); f.connect(g); g.connect(this.out);
+    o.start(t); lfo.start(t); o.stop(t + 0.38); lfo.stop(t + 0.38);
+  },
+  knockedOut() { [523, 392, 262].forEach((f, i) => this.tone("triangle", f, f * 0.96, 0.2, 0.25, i * 0.17)); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => this.tone("square", f, f, 0.15, 0.1, i * 0.12)); this.tone("square", 1047, 1050, 0.55, 0.1, 0.48); },
+  whoosh() { this.tone("sine", 260, 1500, 0.9, 0.22); this.noise(0.5, 900, 0.18); this.tone("square", 90, 240, 0.2, 0.06); },
+  tick() { this.tone("sine", 660, 660, 0.12, 0.22); },
+  go() { this.tone("sine", 990, 1000, 0.3, 0.26); },
+  faster() { [0, 0.13].forEach((d) => this.tone("square", 330, 880, 0.12, 0.08, d)); },
+};
+
+/* ======================================================================
+   Drawing
+   ====================================================================== */
+const $ = (id) => document.getElementById(id);
+const canvas = $("board");
+const ctx = canvas.getContext("2d");
+const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FONT_D = '"Luckiest Guy", Impact, "Arial Black", sans-serif';
+const COL = {
+  ink: "#241a2e", edge: "#2f6726", grassA: "#8fd86f", grassB: "#4c9f3a", dirt: "#d6a867", dirtDark: "#a3763f",
+  tower: "#ffc53a", towerDark: "#d18b0c", cap: "#3d9be0", red: "#e5412f", steel: "#a3acbd", white: "#ffffff",
+  comb: "#e53b2c", beak: "#f6a821", skin: "#f3c18f", leather: "#7a4524", plane: "#e2402f", planeDark: "#9e2417",
+  wing: "#ffd43b", wingDark: "#d2a00f", roof: "#5b2c22", glass: "#a8dcff", grey: "#b9ad9a", greyDark: "#857a69",
+};
+const SEAT_COL = [
+  { c: "#e5412f", d: "#a3261a" },
+  { c: "#f2b90f", d: "#a77c00" },
+  { c: "#2fa84c", d: "#1b6e30" },
+  { c: "#8a55d4", d: "#5a2f99" },
+];
+const GREY_SEAT = { c: COL.grey, d: COL.greyDark };
+
+let W = 0, H = 0, DPR = 1, R = 100, cx = 0, cy = 0, HP = 30, grassGrad = null;
+const SY = 0.56;
+function layout() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  const narrow = W < 680;
+  const topPad = narrow ? 112 : 18, botPad = narrow ? 70 : 18;
+  const availH = Math.max(140, H - topPad - botPad);
+  // On wide screens the main menu sits on the left and the board moves right, beside it.
+  const side = currentScreen === "menu" && W >= 1100 ? Math.round(0.04 * W + Math.min(480, 0.4 * W) + 16) : 0;
+  R = Math.max(40, Math.min((W - side - 24) / 3.05, availH / 2.75));
+  cx = side + (W - side) / 2;
+  cy = topPad + 1.8 * R + (availH - 2.75 * R) / 2;
+  HP = R * 0.28;
+  grassGrad = ctx.createRadialGradient(cx - 0.35 * R, cy - 0.3 * R, 0.1 * R, cx, cy, 1.6 * R);
+  grassGrad.addColorStop(0, COL.grassA); grassGrad.addColorStop(1, COL.grassB);
+}
+function P(r, ang, h) { return { x: cx + Math.cos(ang) * r * R, y: cy + Math.sin(ang) * r * R * SY - (h || 0) * HP }; }
+function ell(x, y, rx, ry) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(1e-4, rx), Math.max(1e-4, ry), 0, 0, TAU); }
+function rrect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function line(a, b) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+function lw(f) { return Math.max(1.2, R * f); }
+function wedge(a0, a1, r0, r1) {
+  ctx.beginPath();
+  const n = 18;
+  for (let i = 0; i <= n; i++) { const p = P(r1, a0 + (a1 - a0) * i / n); if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); }
+  for (let i = n; i >= 0; i--) { const p = P(r0, a0 + (a1 - a0) * i / n); ctx.lineTo(p.x, p.y); }
+  ctx.closePath();
+}
+
+function drawBoard(v) {
+  const rx = 1.46 * R, ry = rx * SY, th = 0.075 * R;
+  ctx.fillStyle = "rgba(0,0,0,0.32)"; ell(cx + 0.04 * R, cy + th + 0.06 * R, rx * 1.03, ry * 1.05); ctx.fill();
+  ctx.fillStyle = COL.edge; ell(cx, cy + th, rx, ry); ctx.fill(); ctx.fillRect(cx - rx, cy, rx * 2, th);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = lw(0.008);
+  ctx.beginPath(); ctx.ellipse(cx, cy + th, rx, ry, 0, 0, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - rx, cy); ctx.lineTo(cx - rx, cy + th); ctx.moveTo(cx + rx, cy); ctx.lineTo(cx + rx, cy + th); ctx.stroke();
+  ctx.fillStyle = grassGrad; ell(cx, cy, rx, ry); ctx.fill(); ctx.stroke();
+  ctx.save(); ell(cx, cy, rx, ry); ctx.clip();
+  ctx.fillStyle = "rgba(255,255,255,0.07)";
+  for (let i = -9; i <= 9; i += 2) ctx.fillRect(cx + i * 0.17 * R, cy - ry, 0.17 * R, ry * 2);
+  ctx.restore();
+  ctx.fillStyle = COL.dirt; ell(cx, cy, 1.12 * R, 1.12 * R * SY); ctx.fill();
+  ctx.strokeStyle = COL.dirtDark; ctx.lineWidth = lw(0.006); ctx.stroke();
+  ctx.fillStyle = grassGrad; ell(cx, cy, 0.88 * R, 0.88 * R * SY); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.setLineDash([R * 0.03, R * 0.05]); ctx.strokeStyle = "rgba(120,80,30,0.35)"; ctx.lineWidth = lw(0.008);
+  ell(cx, cy, R, R * SY); ctx.stroke(); ctx.restore();
+  for (let s = 0; s < 4; s++) {
+    if (!(v.inGame & (1 << s))) continue;
+    const a = SEAT_ANGLES[s];
+    wedge(a + PAD_OFF - 0.08, a + 0.17, 0.885, 1.115);
+    ctx.globalAlpha = 0.5; ctx.fillStyle = seatChicks(v.cm, s) ? SEAT_COL[s].c : COL.grey; ctx.fill(); ctx.globalAlpha = 1;
+  }
+}
+
+function drawBarn(s, v) {
+  const a = SEAT_ANGLES[s], p = P(1.7, a, 0), u = 0.17 * R;
+  const active = (v.inGame & (1 << s)) !== 0;
+  const live = active && seatChicks(v.cm, s) > 0;
+  const col = live ? SEAT_COL[s] : GREY_SEAT;
+  ctx.lineJoin = "round";
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ell(p.x + u * 0.12, p.y + u * 0.04, u * 0.82, u * 0.2); ctx.fill();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = lw(0.008);
+  ctx.beginPath(); ctx.rect(p.x - 0.55 * u, p.y - 0.72 * u, 1.1 * u, 0.72 * u); ctx.fillStyle = col.c; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.x - 0.7 * u, p.y - 0.68 * u); ctx.lineTo(p.x - 0.36 * u, p.y - 1.14 * u); ctx.lineTo(p.x + 0.36 * u, p.y - 1.14 * u); ctx.lineTo(p.x + 0.7 * u, p.y - 0.68 * u); ctx.closePath();
+  ctx.fillStyle = COL.roof; ctx.fill(); ctx.stroke();
+  const dw = 0.42 * u, dh = 0.46 * u;
+  ctx.beginPath(); ctx.rect(p.x - dw / 2, p.y - dh, dw, dh); ctx.fillStyle = col.d; ctx.fill();
+  ctx.strokeStyle = COL.white; ctx.lineWidth = lw(0.005); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.x - dw / 2, p.y - dh); ctx.lineTo(p.x + dw / 2, p.y); ctx.moveTo(p.x + dw / 2, p.y - dh); ctx.lineTo(p.x - dw / 2, p.y); ctx.stroke();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = lw(0.006);
+  ctx.beginPath(); ctx.rect(p.x - 0.12 * u, p.y - 0.97 * u, 0.24 * u, 0.17 * u); ctx.fillStyle = COL.white; ctx.fill(); ctx.stroke();
+}
+
+let keyLabels = ["", "", "", ""];
+function drawPaddle(s, v) {
+  if (!(v.inGame & (1 << s))) return;
+  const a = SEAT_ANGLES[s] + PAD_OFF;
+  const live = seatChicks(v.cm, s) > 0;
+  const l = live ? v.lift[s] : 0;
+  const B = P(1.36, a, 0.05), T = P(0.84 + 0.08 * l, a, 0.12 + 1.05 * l);
+  const col = live ? SEAT_COL[s] : GREY_SEAT;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 0.085 * R; line(B, T);
+  ctx.strokeStyle = col.c; ctx.lineWidth = 0.056 * R; line(B, T);
+  ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 0.014 * R;
+  line({ x: B.x - 0.012 * R, y: B.y - 0.012 * R }, { x: T.x - 0.012 * R, y: T.y - 0.012 * R });
+  ctx.beginPath(); ctx.arc(B.x, B.y, 0.058 * R, 0, TAU); ctx.fillStyle = col.d; ctx.fill();
+  ctx.lineWidth = lw(0.008); ctx.strokeStyle = COL.ink; ctx.stroke();
+  // power ring: how hard the lever is being pushed; flashing red is "too hard"
+  const hold = live ? v.hold[s] : 0;
+  if (hold > 0) {
+    const f = Math.min(1, hold / TOO_HARD), hot = hold >= TOO_HARD;
+    const tone = hold < 0.1 ? COL.white : hold < 0.24 ? COL.tower : "#ff8a1f";   // hop, over one, over two
+    ctx.beginPath(); ctx.arc(B.x, B.y, 0.082 * R, -Math.PI / 2, -Math.PI / 2 + TAU * f);
+    ctx.lineWidth = 0.032 * R; ctx.strokeStyle = COL.ink; ctx.stroke();
+    ctx.lineWidth = 0.018 * R; ctx.strokeStyle = hot ? (Math.sin(performance.now() / 45) > 0 ? COL.red : COL.white) : tone; ctx.stroke();
+  }
+  const label = keyLabels[s];
+  if (label && live) {
+    ctx.font = `${Math.round(R * 0.068)}px ${FONT_D}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = COL.white; ctx.fillText(label, B.x, B.y + R * 0.006);
+  }
+}
+
+function chickenFig(c) {
+  ctx.lineWidth = Math.max(1, c * 0.075); ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.strokeStyle = COL.beak;
+  ctx.beginPath(); ctx.moveTo(-0.08 * c, -0.2 * c); ctx.lineTo(-0.11 * c, 0); ctx.moveTo(0.09 * c, -0.2 * c); ctx.lineTo(0.12 * c, 0); ctx.stroke();
+  ctx.strokeStyle = COL.ink; ctx.fillStyle = COL.white;
+  ctx.beginPath(); ctx.moveTo(-0.3 * c, -0.48 * c); ctx.lineTo(-0.64 * c, -0.88 * c); ctx.lineTo(-0.5 * c, -0.38 * c); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ell(0, -0.47 * c, 0.42 * c, 0.31 * c); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-0.06 * c, -0.47 * c, 0.2 * c, 0.12 * c, -0.25, 0, Math.PI); ctx.stroke();
+  ell(0.26 * c, -0.86 * c, 0.19 * c, 0.19 * c); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = COL.comb;
+  for (const [dx, dy] of [[0.15, -1.05], [0.27, -1.09], [0.38, -1.03]]) { ctx.beginPath(); ctx.arc(dx * c, dy * c, 0.075 * c, 0, TAU); ctx.fill(); }
+  ctx.beginPath(); ctx.moveTo(0.43 * c, -0.9 * c); ctx.lineTo(0.62 * c, -0.85 * c); ctx.lineTo(0.43 * c, -0.79 * c); ctx.closePath(); ctx.fillStyle = COL.beak; ctx.fill();
+  ctx.beginPath(); ctx.arc(0.42 * c, -0.72 * c, 0.05 * c, 0, TAU); ctx.fillStyle = COL.comb; ctx.fill();
+  ctx.beginPath(); ctx.arc(0.31 * c, -0.89 * c, 0.036 * c, 0, TAU); ctx.fillStyle = COL.ink; ctx.fill();
+}
+function drawPerch(p, c, col, empty) {
+  ctx.fillStyle = col.d; ell(p.x, p.y + c * 0.07, c * 0.52, c * 0.52 * 0.42); ctx.fill();
+  ctx.fillStyle = col.c; ell(p.x, p.y, c * 0.52, c * 0.52 * 0.42); ctx.fill();
+  ctx.lineWidth = lw(0.005); ctx.strokeStyle = COL.ink; ctx.stroke();
+  if (empty) { ctx.fillStyle = "rgba(36,26,46,0.7)"; ell(p.x, p.y, c * 0.3, c * 0.07); ctx.fill(); }
+}
+function drawChicken(s, j, v, t) {
+  const b = s * 3 + j, bit = 1 << b;
+  const ang = SEAT_ANGLES[s] + CHICK_OFF[j];
+  const p = P(1.0, ang, 0), c = 0.1 * R;
+  const col = seatChicks(v.cm, s) ? SEAT_COL[s] : GREY_SEAT;
+  const standing = (v.cm & bit) !== 0;
+  const f = p.x < cx ? 1 : -1;
+  if (!standing) {
+    drawPerch(p, c, col, true);
+    const tt = t - fx.fallT[b];
+    if (tt < 0 || tt > 0.9) return;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - tt / 0.9);
+    ctx.translate(p.x + Math.cos(ang) * tt * R * 0.55, p.y + (-1.2 * tt + 2.6 * tt * tt) * R * 0.5);
+    ctx.rotate(tt * 11 * -f); ctx.scale(f, 1);
+    chickenFig(c);
+    ctx.restore();
+    return;
+  }
+  drawPerch(p, c, col, false);
+  ctx.save(); ctx.translate(p.x, p.y);
+  if (!(v.al & bit)) ctx.rotate(Math.sin(t * 40) * 0.22);
+  ctx.scale(f, 1);
+  chickenFig(c);
+  ctx.restore();
+}
+
+function hs(h) { return h <= 3.5 ? h : 3.5 + (h - 3.5) * 0.4; }
+function louiePos(v) { return P(v.rho, v.A, hs(v.h)); }
+function drawTower(v) {
+  const tw = 0.1 * R, top = cy - 0.92 * R;
+  ctx.lineWidth = lw(0.008); ctx.strokeStyle = COL.ink; ctx.lineJoin = "round";
+  ctx.fillStyle = COL.cap; ell(cx, cy, tw * 1.9, tw * 1.9 * SY); ctx.fill(); ctx.stroke();
+  const g = ctx.createLinearGradient(cx - tw, 0, cx + tw, 0);
+  g.addColorStop(0, COL.towerDark); g.addColorStop(0.42, COL.tower); g.addColorStop(1, COL.towerDark);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(cx - tw, top); ctx.lineTo(cx - tw, cy - 0.02 * R);
+  ctx.ellipse(cx, cy - 0.02 * R, tw, tw * SY, 0, Math.PI, 0, true);
+  ctx.lineTo(cx + tw, top); ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (const yy of [0.3, 0.55]) { ctx.fillStyle = COL.red; ctx.fillRect(cx - tw, top + yy * R, tw * 2, 0.05 * R); ctx.strokeRect(cx - tw, top + yy * R, tw * 2, 0.05 * R); }
+  ctx.fillStyle = COL.cap; ell(cx, top, tw * 1.35, tw * 1.35 * SY); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx, top, tw * 0.85, tw * 1.05, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = COL.red; ctx.fill(); ctx.stroke();
+  // the arm
+  const pv = { x: cx, y: top - 0.1 * R };
+  const L = louiePos(v);
+  const cw = { x: pv.x - (L.x - pv.x) * 0.2, y: pv.y - (L.y - pv.y) * 0.2 };
+  ctx.lineCap = "round";
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 0.032 * R; line(cw, L);
+  ctx.strokeStyle = COL.steel; ctx.lineWidth = 0.017 * R; line(cw, L);
+  ctx.beginPath(); ctx.arc(cw.x, cw.y, 0.04 * R, 0, TAU); ctx.fillStyle = COL.ink; ctx.fill();
+  ctx.beginPath(); ctx.arc(pv.x, pv.y, 0.035 * R, 0, TAU); ctx.fillStyle = COL.tower; ctx.fill(); ctx.lineWidth = lw(0.007); ctx.stroke();
+}
+
+function drawPlane(x, y, heading, sc, pitch, t) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(heading);
+  let k = Math.cos(pitch);
+  if (Math.abs(k) < 0.14) k = k < 0 ? -0.14 : 0.14;
+  ctx.scale(sc * k, sc);
+  const belly = k < 0;
+  ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = COL.ink; ctx.lineWidth = 0.028;
+  rrect(-0.52, -0.18, 0.14, 0.36, 0.05); ctx.fillStyle = COL.wing; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0.4, -0.09); ctx.quadraticCurveTo(0.45, 0, 0.4, 0.09); ctx.lineTo(-0.2, 0.08);
+  ctx.quadraticCurveTo(-0.5, 0.045, -0.54, 0); ctx.quadraticCurveTo(-0.5, -0.045, -0.2, -0.08); ctx.closePath();
+  ctx.fillStyle = belly ? COL.planeDark : COL.plane; ctx.fill(); ctx.stroke();
+  rrect(-0.05, -0.5, 0.2, 1.0, 0.06); ctx.fillStyle = COL.wingDark; ctx.fill(); ctx.stroke();
+  if (!belly) {
+    rrect(0.02, -0.55, 0.2, 1.1, 0.07); ctx.fillStyle = COL.wing; ctx.fill(); ctx.stroke();
+    for (const yy of [-0.39, 0.39]) { ctx.beginPath(); ctx.arc(0.12, yy, 0.055, 0, TAU); ctx.fillStyle = COL.plane; ctx.fill(); }
+  }
+  ctx.beginPath(); ctx.arc(0.42, 0, 0.075, 0, TAU); ctx.fillStyle = COL.ink; ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.35)"; ell(0.49, 0, 0.03, 0.27); ctx.fill();
+  const bl = Math.sin(t * 57);
+  ctx.beginPath(); ctx.moveTo(0.49, -0.26 * bl); ctx.lineTo(0.49, 0.26 * bl); ctx.lineWidth = 0.05; ctx.stroke(); ctx.lineWidth = 0.028;
+  if (!belly) {
+    const wv = Math.sin(t * 18) * 0.05;
+    ctx.beginPath(); ctx.moveTo(-0.18, 0.03); ctx.quadraticCurveTo(-0.34, 0.09 + wv, -0.52, 0.05 - wv);
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = 0.09; ctx.stroke();
+    ctx.strokeStyle = COL.white; ctx.lineWidth = 0.055; ctx.stroke();
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = 0.028;
+    ell(-0.13, 0, 0.12, 0.11); ctx.fillStyle = COL.ink; ctx.fill();   // cockpit opening under the pilot
+  }
+  ctx.restore();
+}
+
+/* Louie himself. His look is configurable (Dress up Louie): a pink knitted
+   beanie, a red aviator cap with ear flaps that fly in the wind, a baseball cap
+   or no hat; wavy hair, a punk mohawk or bald; five beard sizes; and the colour
+   of his glasses. Pink shades sit on his hat or head. The head turns with `yaw` (0 = facing the viewer, +PI/2 = facing
+   screen-right, PI = back of head), so on the board he looks where the plane is
+   going. `wind` (0..1) is how hard the flaps and pom-pom are blowing. */
+const FACE = {
+  skin: "#f4c9a8", skinShade: "#e3a07c", cheek: "rgba(236,104,104,0.38)",
+  hair: "#8b5a30", hairDark: "#5b3618", pink: "#ff3fa4", pinkLite: "#ffc4e4", strap: "#c2187a",
+  mouth: "#5b1d22", tongue: "#e8737d", stache: "#4e2c14", shirt: "#f7f4ee",
+  cap: "#d9342b", capDark: "#9e1f17", capHi: "rgba(255,180,160,0.5)", fleece: "#fff1d6",
+  beanie: "#ff74b8", beanieDark: "#d6458f", beanieLite: "#ffc2e0",
+  base: "#2f6fe0", baseDark: "#1d4aa8", mohawk: "#ff6a1a", mohawkDark: "#b8400a", stubble: "rgba(91,54,24,0.24)",
+};
+const GLASSES = {
+  lime: { name: "Lime", c: "#6cf03a" }, pink: { name: "Hot pink", c: "#ff3fa4" }, blue: { name: "Sky blue", c: "#3db7ff" },
+  yellow: { name: "Sunflower", c: "#ffd21f" }, red: { name: "Tomato", c: "#ff4b3a" }, purple: { name: "Violet", c: "#a066ff" },
+  black: { name: "Black", c: "#2b2b2b" },
+};
+const HATS = { beanie: "Beanie", cap: "Pilot cap", base: "Baseball cap", none: "No hat" };
+const HAIRS = { wavy: "Wavy", punk: "Punk", bald: "Bald" };
+const BEARDS = ["Clean-shaven", "Short moustache", "Handlebar", "Long handlebar", "Handlebar and full beard"];
+const DEFAULT_LOOK = { hat: "beanie", hair: "wavy", beard: 3, glasses: "lime" };
+function cleanLook(l) {
+  const o = l && typeof l === "object" ? l : {};
+  return {
+    hat: HATS[o.hat] ? o.hat : DEFAULT_LOOK.hat,
+    hair: HAIRS[o.hair] ? o.hair : DEFAULT_LOOK.hair,
+    beard: Number.isInteger(o.beard) && o.beard >= 0 && o.beard < BEARDS.length ? o.beard : DEFAULT_LOOK.beard,
+    glasses: GLASSES[o.glasses] ? o.glasses : DEFAULT_LOOK.glasses,
+  };
+}
+function tint(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (v) => Math.round(v + (255 - v) * 0.55);
+  return `rgba(${mix((n >> 16) & 255)},${mix((n >> 8) & 255)},${mix(n & 255)},${alpha})`;
+}
+const STACHES = [
+  null,
+  { pts: [[0, 0.4], [0.22, 0.43], [0.42, 0.48], [0.56, 0.45]], w: 0.1, ext: 0, bushy: false },
+  { pts: [[0, 0.4], [0.25, 0.44], [0.5, 0.52], [0.72, 0.47], [0.86, 0.36], [0.8, 0.27]], w: 0.1, ext: 0, bushy: false },
+  { pts: [[0, 0.4], [0.28, 0.45], [0.55, 0.55], [0.82, 0.55], [1.02, 0.44], [1.12, 0.29], [1.04, 0.17], [0.92, 0.2], [0.94, 0.28]], w: 0.12, ext: 0.25, bushy: true },
+];
+STACHES[4] = STACHES[3];
+
+function drawLouieFace(c, x, y, r, o) {
+  o = o || {};
+  const look = cleanLook(o.look);
+  const t = o.t || 0;
+  let yaw = o.yaw || 0;
+  yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw));
+  const sy = Math.sin(yaw), cyw = Math.cos(yaw);
+  const wind = Math.max(0, Math.min(1, o.wind == null ? 0.3 : o.wind));
+  const hat = look.hat, hair = look.hair, wavy = hair === "wavy";
+  const RX = 0.72 * r, CY = 0.06 * r, RY = 0.9 * r;
+  const lw = Math.max(1.2, r * 0.07);
+  const HALF = Math.PI / 2;
+  const clampA = (u) => { u = Math.atan2(Math.sin(u), Math.cos(u)); return Math.max(-HALF, Math.min(HALF, u)); };
+  const px = (a, k) => (k || 1) * RX * Math.sin(clampA(yaw + a));   // screen x of a point a radians round the face
+  const vis = (a) => Math.cos(yaw + a);                               // > 0 when that point faces us
+  const elli = (a, b, rx, ry) => { c.beginPath(); c.ellipse(a, b, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU); };
+  const box = (a, b, w, h, rr) => { c.beginPath(); if (c.roundRect) c.roundRect(a, b, w, h, Math.min(rr, w / 2, h / 2)); else c.rect(a, b, w, h); };
+  const smooth = (pts, closed) => {        // a soft curve through screen points
+    c.beginPath();
+    const m = (i) => { const p = pts[i % pts.length], q = pts[(i + 1) % pts.length]; return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; };
+    if (closed) { const s0 = m(pts.length - 1); c.moveTo(s0[0], s0[1]); for (let i = 0; i < pts.length; i++) { const e = m(i); c.quadraticCurveTo(pts[i][0], pts[i][1], e[0], e[1]); } c.closePath(); }
+    else { c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length - 1; i++) { const e = m(i); c.quadraticCurveTo(pts[i][0], pts[i][1], e[0], e[1]); } const l = pts[pts.length - 1]; c.lineTo(l[0], l[1]); }
+  };
+  const a0 = -HALF - yaw, a1 = HALF - yaw;        // the half of the head facing us
+  const HRX = 0.8 * r, HRY = (hat === "beanie" ? 1.04 : 1.0) * r;   // hats sit a little proud of the head
+  const ringR = (yy) => HRX * Math.sqrt(Math.max(0, 1 - ((yy - CY) / HRY) ** 2));
+  const sway = Math.sin(t * 9) * 0.03 * r;
+  const back = -sy * 0.2 * r;                     // the hair hangs behind the way he faces
+
+  c.save();
+  c.translate(x, y);
+  if (o.rot) c.rotate(o.rot);
+  c.lineJoin = "round"; c.lineCap = "round";
+
+  const baseBrim = (a) => (-0.42 + 0.14 * (1 - Math.cos(a))) * r;
+  const visor = () => {
+    const pts = [];
+    for (let i = 0; i <= 16; i++) { const a = -1.05 + 2.1 * i / 16; pts.push([HRX * Math.sin(yaw + a), baseBrim(a)]); }
+    for (let i = 16; i >= 0; i--) {
+      const a = -1.05 + 2.1 * i / 16, R2 = HRX + 0.04 * r + 0.52 * r * Math.max(0, Math.cos(a * 1.25));
+      pts.push([R2 * Math.sin(yaw + a), baseBrim(a) + 0.32 * (R2 - HRX) * Math.cos(yaw + a)]);
+    }
+    c.beginPath(); pts.forEach(([X, Y], i) => { if (i) c.lineTo(X, Y); else c.moveTo(X, Y); }); c.closePath();
+    c.fillStyle = FACE.baseDark; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+  };
+
+  if (o.body) {   // white tee and neck, for the portrait
+    box(-1.15 * r, 0.95 * r, 2.3 * r, 1.4 * r, 0.6 * r); c.fillStyle = FACE.shirt; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+    box(-0.24 * r, 0.6 * r, 0.48 * r, 0.5 * r, 0.1 * r); c.fillStyle = FACE.skinShade; c.fill(); c.stroke();
+    c.beginPath(); c.arc(0, 0.98 * r, 0.3 * r, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+  }
+
+  if (hat === "base" && cyw <= -0.3) visor();
+  if (wavy) {
+  // hair behind the head, down to the jaw (with no hat it shows over the top too)
+  const w = 0.82 * r, bot = 0.84 * r;
+  c.beginPath();
+  c.moveTo(back - w, 0.05 * r);
+  c.ellipse(back, 0.05 * r, w, (hat === "none" ? 1.0 : 0.75) * r, 0, Math.PI, TAU);
+  c.quadraticCurveTo(back + w + 0.06 * r, 0.45 * r, back + w * 0.92 + sway, bot);
+  const n = 5, span = 1.84 * w;
+  for (let i = 0; i < n; i++) {
+    const xa = back + w * 0.92 - (i / n) * span, xb = back + w * 0.92 - ((i + 1) / n) * span;
+    c.quadraticCurveTo((xa + xb) / 2, bot + 0.12 * r, xb + (i === n - 1 ? 0 : sway * (i % 2 ? 1 : -1)), bot);
+  }
+  c.quadraticCurveTo(back - w - 0.06 * r, 0.45 * r, back - w, 0.05 * r);
+  c.closePath();
+  c.fillStyle = FACE.hair; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+  c.strokeStyle = FACE.hairDark; c.lineWidth = lw * 0.55;
+  for (const sx of [-1, 1]) for (let i = 0; i < 2; i++) {
+    const x0 = back + sx * (0.58 + i * 0.14) * r;
+    c.beginPath(); c.moveTo(x0, (hat === "none" ? -0.3 : -0.2) * r);
+    c.bezierCurveTo(x0 + sx * 0.12 * r, 0.1 * r, x0 - sx * 0.1 * r, 0.42 * r, x0 + sx * 0.05 * r + sway, 0.78 * r);
+    c.stroke();
+  }
+
+  }
+
+  // head: hair all round, the face on the front
+  c.save();
+  elli(0, CY, RX, RY); c.clip();
+  c.fillStyle = wavy ? FACE.hair : FACE.skin; c.fillRect(-r, -r, 2 * r, 2.2 * r);
+  if (hair === "punk") { c.fillStyle = FACE.stubble; c.fillRect(-r, -r, 2 * r, 2.2 * r); }   // shaved sides
+  const lo = Math.max(-1.45, -HALF - yaw), hi = Math.min(1.45, HALF - yaw);
+  const faceOn = hi > lo + 0.05;
+  if (faceOn) {
+    const xL = RX * Math.sin(yaw + lo), xR = RX * Math.sin(yaw + hi);
+    elli((xL + xR) / 2, 0.36 * r, (xR - xL) / 2 + 0.04 * r, 0.78 * r);
+    c.fillStyle = FACE.skin; c.fill();
+    if (wavy) {
+    const fr = hat === "none"
+      ? [[-1.5, -0.95], [-1.1, -0.42], [-0.5, -0.36], [-0.1, -0.44], [0.3, -0.56], [0.75, -0.62], [1.5, -0.75]]   // side parting
+      : [[-1.5, -0.95], [-1.1, -0.4], [-0.6, -0.36], [-0.2, -0.42], [0.25, -0.38], [0.7, -0.4], [1.5, -0.9]];    // strands under the hat
+    c.beginPath();
+    c.moveTo(px(-1.6), -1.0 * r);
+    for (const [a, yy] of fr) c.lineTo(px(a), yy * r);
+    c.lineTo(px(1.6), -1.0 * r); c.closePath();
+    c.fillStyle = FACE.hair; c.fill();
+    if (hat === "none") {
+      c.beginPath();
+      fr.forEach(([a, yy], i) => { if (i) c.lineTo(px(a), yy * r); else c.moveTo(px(a), yy * r); });
+      c.strokeStyle = FACE.hairDark; c.lineWidth = lw * 0.7; c.stroke();
+    }
+    }
+  }
+  c.restore();
+  elli(0, CY, RX, RY); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+
+  if (!wavy) {
+    if (hair === "bald" && hat === "none") { elli(-0.22 * r - sy * 0.15 * r, -0.6 * r, 0.2 * r, 0.09 * r); c.fillStyle = "rgba(255,255,255,0.45)"; c.fill(); }
+    for (const sx of [-1, 1]) {            // ears, now that no hair covers them
+      const a = sx * 1.55;
+      if (vis(a) < -0.25) continue;
+      const ex = px(a, 1.02), ey = 0.02 * r;
+      elli(ex, ey, 0.1 * r, 0.16 * r); c.fillStyle = FACE.skin; c.fill(); c.lineWidth = lw * 0.9; c.strokeStyle = COL.ink; c.stroke();
+      c.beginPath(); c.arc(ex, ey, 0.055 * r, -1.2, 1.2); c.strokeStyle = FACE.skinShade; c.lineWidth = lw * 0.7; c.stroke();
+    }
+  }
+  if (hair === "punk" && hat === "none") {  // the mohawk: spikes along the middle of his head, front to back
+    const sag = (be, k) => [k * RX * Math.cos(be) * sy, CY - k * RY * Math.sin(be)];
+    const b0 = 0.6, b1 = 2.75, N = 8, step = (b1 - b0) / N;
+    c.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const be = b0 + step * i, [bx, by] = sag(be, 0.97);
+      if (i) c.lineTo(bx, by); else c.moveTo(bx, by);
+      if (i === N) break;
+      const bm = be + step / 2, [mx, my] = sag(bm, 0.97);
+      const len = (0.3 + 0.4 * Math.sin((bm - b0) / (b1 - b0) * Math.PI)) * r;
+      const flick = Math.sin(t * 11 + i) * 0.03 * r * (0.3 + wind) - sy * wind * 0.06 * r;
+      const fan = (i / (N - 1) - 0.5) * 0.5 * r * cyw;      // head-on, the spikes fan out into a crest
+      c.lineTo(mx + len * Math.cos(bm) * sy + flick + fan, my - len * Math.sin(bm));
+    }
+    for (let i = N; i >= 0; i--) { const [bx, by] = sag(b0 + step * i, 0.9); c.lineTo(bx, by); }
+    c.closePath();
+    const fin = r * (0.04 + 0.16 * Math.abs(cyw));       // the crest looks thick head-on, thin in profile
+    c.lineWidth = fin + lw * 2; c.strokeStyle = COL.ink; c.stroke();
+    c.lineWidth = fin; c.strokeStyle = FACE.mohawk; c.stroke();
+    c.fillStyle = FACE.mohawk; c.fill();
+    c.lineWidth = lw * 0.5; c.strokeStyle = FACE.mohawkDark; c.stroke();
+  }
+
+  // locks hanging down past the cheeks
+  if (wavy) for (const sx of [-1, 1]) {
+    const a = sx * 1.38;
+    if (vis(a) < -0.1) continue;
+    const xa = px(a, 1.04), top = (hat === "none" ? -0.4 : -0.35) * r;
+    c.beginPath(); c.moveTo(xa - 0.09 * r, top);
+    c.quadraticCurveTo(xa + sx * 0.06 * r, 0.12 * r, xa - sx * 0.02 * r + sway, 0.62 * r);
+    c.quadraticCurveTo(xa + sx * 0.14 * r, 0.12 * r, xa + 0.09 * r, top); c.closePath();
+    c.fillStyle = FACE.hair; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+  }
+
+  // the hat
+  const edgeAt = (brimFn, dy) => (i) => { const a = a0 + (a1 - a0) * i / 24; return [HRX * Math.sin(yaw + a), brimFn(a) + (dy || 0)]; };
+  const pathAlong = (pt, close) => {
+    c.beginPath();
+    for (let i = 0; i <= 24; i++) { const [X, Y] = pt(i); if (i) c.lineTo(X, Y); else c.moveTo(X, Y); }
+    if (close) { c.lineTo(HRX + 4, -1.5 * r); c.lineTo(-HRX - 4, -1.5 * r); c.closePath(); }
+  };
+  const shell = (brimFn, fill, inside) => {
+    c.save(); elli(0, CY, HRX, HRY); c.clip();
+    pathAlong(edgeAt(brimFn), true); c.fillStyle = fill; c.fill();
+    if (inside) inside();
+    c.restore();
+    c.save(); pathAlong(edgeAt(brimFn), true); c.clip(); elli(0, CY, HRX, HRY); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke(); c.restore();
+  };
+  const meridian = (brimFn, am) => {
+    c.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const yy = brimFn(am) + (CY - HRY - brimFn(am)) * i / 12, X = ringR(yy) * Math.sin(yaw + am);
+      if (i) c.lineTo(X, yy); else c.moveTo(X, yy);
+    }
+  };
+  let shadesY = -0.92 * r;
+  if (hat === "cap") {
+    const brimY = (a) => (-0.44 + 0.15 * (1 - Math.cos(a))) * r;
+    shell(brimY, FACE.cap, () => {
+      elli(-0.3 * r - sy * 0.12 * r, -0.72 * r, 0.26 * r, 0.11 * r); c.fillStyle = FACE.capHi; c.fill();
+      c.strokeStyle = FACE.capDark; c.lineWidth = r * 0.045;
+      for (const am of [0, Math.PI]) { if (Math.cos(yaw + am) >= 0) { meridian(brimY, am); c.stroke(); } }
+    });
+    pathAlong(edgeAt(brimY)); c.lineWidth = r * 0.15; c.strokeStyle = COL.ink; c.stroke();
+    pathAlong(edgeAt(brimY)); c.lineWidth = r * 0.09; c.strokeStyle = FACE.capDark; c.stroke();
+    c.beginPath(); c.arc(0, CY - HRY + 0.05 * r, 0.065 * r, 0, TAU); c.fillStyle = FACE.capDark; c.fill(); c.lineWidth = lw * 0.7; c.strokeStyle = COL.ink; c.stroke();
+    shadesY = -0.64 * r;
+  } else if (hat === "beanie") {
+    const brimY = (a) => (-0.4 + 0.16 * (1 - Math.cos(a))) * r;
+    const cuffTop = (a) => brimY(a) - 0.22 * r;
+    shell(brimY, FACE.beanie, () => {
+      c.strokeStyle = FACE.beanieDark; c.lineWidth = r * 0.03;               // knitted ribs
+      for (let am = -2.8; am <= 3.15; am += 0.35) { if (Math.cos(yaw + am) > 0.05) { meridian(cuffTop, am); c.stroke(); } }
+      // folded cuff
+      c.beginPath();
+      for (let i = 0; i <= 24; i++) { const [X, Y] = edgeAt(cuffTop)(i); if (i) c.lineTo(X, Y); else c.moveTo(X, Y); }
+      for (let i = 24; i >= 0; i--) { const [X, Y] = edgeAt(brimY)(i); c.lineTo(X, Y); }
+      c.closePath(); c.fillStyle = FACE.beanieDark; c.fill();
+      c.strokeStyle = FACE.beanie; c.lineWidth = r * 0.035;
+      for (let i = 1; i < 24; i++) {
+        const a = a0 + (a1 - a0) * i / 24, X = HRX * Math.sin(yaw + a);
+        c.beginPath(); c.moveTo(X, cuffTop(a) + 0.03 * r); c.lineTo(X, brimY(a) - 0.03 * r); c.stroke();
+      }
+    });
+    pathAlong(edgeAt(cuffTop)); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+    pathAlong(edgeAt(brimY)); c.lineWidth = lw; c.stroke();
+    // pom-pom, bobbing in the wind
+    const bx = Math.sin(t * 7) * 0.05 * r * (0.3 + wind) - sy * 0.1 * r * wind, by = CY - HRY - 0.06 * r;
+    const puffs = [];
+    for (let i = 0; i < 9; i++) { const ang = i / 9 * TAU + t * 0.5; puffs.push([bx + Math.cos(ang) * 0.13 * r, by + Math.sin(ang) * 0.13 * r]); }
+    c.lineWidth = lw * 2; c.strokeStyle = COL.ink;
+    for (const [qx, qy] of puffs) { c.beginPath(); c.arc(qx, qy, 0.08 * r, 0, TAU); c.stroke(); }
+    c.fillStyle = FACE.beanieLite;
+    for (const [qx, qy] of puffs) { c.beginPath(); c.arc(qx, qy, 0.08 * r, 0, TAU); c.fill(); }
+    c.beginPath(); c.arc(bx, by, 0.14 * r, 0, TAU); c.fill();
+    shadesY = -0.73 * r;
+  } else if (hat === "base") {
+    shell(baseBrim, FACE.base, () => {
+      elli(-0.3 * r - sy * 0.12 * r, -0.74 * r, 0.24 * r, 0.1 * r); c.fillStyle = "rgba(255,255,255,0.25)"; c.fill();
+      c.strokeStyle = FACE.baseDark; c.lineWidth = r * 0.04;
+      for (const am of [0, 1.05, -1.05, 2.1, -2.1, Math.PI]) { if (Math.cos(yaw + am) > 0) { meridian(baseBrim, am); c.stroke(); } }
+    });
+    pathAlong(edgeAt(baseBrim)); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+    c.beginPath(); c.arc(0, CY - HRY + 0.05 * r, 0.06 * r, 0, TAU); c.fillStyle = FACE.baseDark; c.fill(); c.lineWidth = lw * 0.7; c.strokeStyle = COL.ink; c.stroke();
+    shadesY = -0.72 * r;
+  } else if (hair === "bald") shadesY = -0.8 * r;
+
+  // the pink shades: on the cap like flying goggles, or pushed up on the beanie or his hair
+  const gR = hat === "none" ? 0.88 * RX : ringR(shadesY) * 1.04;
+  if (hat === "cap") {
+    c.beginPath(); c.moveTo(-gR, shadesY); c.lineTo(gR, shadesY);
+    c.lineWidth = r * 0.11; c.strokeStyle = COL.ink; c.stroke(); c.lineWidth = r * 0.065; c.strokeStyle = FACE.strap; c.stroke();
+  }
+  const shades = hat === "none" && hair === "punk" ? [] : [-1, 1].map((sx) => ({ a: sx * 0.42, v: vis(sx * 0.42) }))
+    .filter((g) => hat === "none" || g.v > 0.05).sort((p, q) => p.v - q.v);
+  if (hat !== "cap" && shades.length === 2 && cyw > 0.1) {
+    c.beginPath(); c.moveTo(gR * Math.sin(yaw - 0.1), shadesY - 0.02 * r); c.quadraticCurveTo(gR * Math.sin(yaw), shadesY - 0.07 * r, gR * Math.sin(yaw + 0.1), shadesY - 0.02 * r);
+    c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+  }
+  for (const g of shades) {
+    const x1 = gR * Math.sin(clampA(yaw + g.a - 0.3)), x2 = gR * Math.sin(clampA(yaw + g.a + 0.3));
+    const lx = Math.min(x1, x2), wd = Math.max(0.06 * r, Math.abs(x2 - x1));
+    box(lx, shadesY - 0.11 * r, wd, 0.22 * r, 0.08 * r);
+    c.fillStyle = FACE.pink; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+    if (wd > 0.15 * r) {
+      c.fillStyle = FACE.pinkLite;
+      for (const [dx, dy] of [[0.25, 0.35], [0.55, 0.65], [0.75, 0.3]]) { c.beginPath(); c.arc(lx + wd * dx, shadesY - 0.11 * r + 0.22 * r * dy, 0.024 * r, 0, TAU); c.fill(); }
+    }
+  }
+
+  // glasses: the arms run back to the ears
+  const gc = (GLASSES[look.glasses] || GLASSES.lime).c;
+  const frame = (draw) => { draw(); c.lineWidth = r * 0.15; c.strokeStyle = COL.ink; c.stroke(); draw(); c.lineWidth = r * 0.09; c.strokeStyle = gc; c.stroke(); };
+  if (faceOn) for (const sx of [-1, 1]) {
+    if (vis(sx * 1.0) <= -0.2) continue;
+    const xo = px(sx * 0.75, 1.1), xe = px(sx * 1.5, 1.0);
+    frame(() => { c.beginPath(); c.moveTo(xo, -0.2 * r); c.lineTo(xe, -0.24 * r); });
+  }
+
+  // ear flaps of the pilot cap, flying in the wind
+  if (hat === "cap") for (const sx of [-1, 1]) {
+    const a = sx * 1.45;
+    if (vis(a) < -0.3) continue;
+    const X = HRX * 0.97 * Math.sin(clampA(yaw + a)), Y = (-0.44 + 0.15 * (1 - Math.cos(a))) * r + 0.02 * r;
+    const out = X < 0 ? 1 : -1;
+    const th = out * (0.12 + 0.55 * wind) * Math.abs(cyw) + sy * wind * 1.05 + Math.sin(t * 17 + sx * 1.3) * (0.1 + 0.22 * wind);
+    c.save(); c.translate(X, Y); c.rotate(th);
+    c.beginPath(); c.moveTo(0, 0.42 * r); c.quadraticCurveTo(0.07 * r * Math.sin(t * 23 + sx), 0.58 * r, -0.02 * r, 0.74 * r);
+    c.lineWidth = r * 0.075; c.strokeStyle = COL.ink; c.stroke(); c.lineWidth = r * 0.04; c.strokeStyle = FACE.capDark; c.stroke();
+    const flap = () => {
+      c.beginPath(); c.moveTo(-0.15 * r, -0.04 * r); c.lineTo(-0.17 * r, 0.3 * r);
+      c.quadraticCurveTo(-0.17 * r, 0.47 * r, 0, 0.47 * r); c.quadraticCurveTo(0.17 * r, 0.47 * r, 0.17 * r, 0.3 * r);
+      c.lineTo(0.15 * r, -0.04 * r); c.closePath();
+    };
+    flap(); c.fillStyle = FACE.fleece; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+    c.save(); c.translate(0, 0.02 * r); c.scale(0.76, 0.85); flap(); c.fillStyle = FACE.cap; c.fill(); c.restore();
+    c.setLineDash([r * 0.05, r * 0.05]); c.beginPath(); c.moveTo(0, 0.02 * r); c.lineTo(0, 0.34 * r);
+    c.lineWidth = r * 0.025; c.strokeStyle = FACE.capDark; c.stroke(); c.setLineDash([]);
+    c.restore();
+  }
+
+  if (faceOn) {
+    const whee = o.mood === "whee";
+    const look2 = sy * 0.05 * r;
+    // eyebrows
+    c.strokeStyle = FACE.hairDark; c.lineWidth = r * 0.09;
+    for (const sx of [-1, 1]) {
+      const a = sx * 0.42;
+      if (vis(a) < 0.08) continue;
+      const up = whee ? -0.05 * r : 0;
+      c.beginPath(); c.moveTo(px(a - 0.22), -0.32 * r + up); c.quadraticCurveTo(px(a), -0.41 * r + up, px(a + 0.22), -0.33 * r + up); c.stroke();
+    }
+    // eyes
+    const blink = !whee && (t % 3.7) < 0.12;
+    for (const sx of [-1, 1]) {
+      const a = sx * 0.42, vv = vis(a);
+      if (vv < 0.08) continue;
+      const ex = px(a), ey = -0.1 * r;
+      if (blink) { c.beginPath(); c.moveTo(ex - 0.1 * r * vv, ey); c.lineTo(ex + 0.1 * r * vv, ey); c.strokeStyle = COL.ink; c.lineWidth = lw; c.stroke(); continue; }
+      elli(ex, ey, (whee ? 0.15 : 0.13) * r * Math.max(0.35, vv), (whee ? 0.14 : 0.11) * r); c.fillStyle = COL.white; c.fill();
+      c.beginPath(); c.arc(ex + look2 * vv, ey + 0.01 * r, (whee ? 0.05 : 0.06) * r, 0, TAU); c.fillStyle = COL.ink; c.fill();
+    }
+    // lenses, a little in front of the face
+    for (const sx of [-1, 1]) {
+      const a = sx * 0.42;
+      if (vis(a) < 0.02) continue;
+      const x1 = px(a - 0.33, 1.1), x2 = px(a + 0.33, 1.1);
+      const lx = Math.min(x1, x2), wd = Math.max(0.05 * r, Math.abs(x2 - x1));
+      box(lx, -0.28 * r, wd, 0.36 * r, 0.08 * r); c.fillStyle = tint(gc, 0.42); c.fill();
+      frame(() => box(lx, -0.28 * r, wd, 0.36 * r, 0.08 * r));
+      if (wd > 0.2 * r) { c.beginPath(); c.moveTo(lx + wd * 0.18, -0.2 * r); c.lineTo(lx + wd * 0.38, -0.2 * r); c.strokeStyle = "rgba(255,255,255,0.85)"; c.lineWidth = r * 0.04; c.stroke(); }
+    }
+    if (vis(0) > 0.05) frame(() => { c.beginPath(); c.moveTo(px(-0.09, 1.1), -0.14 * r); c.lineTo(px(0.09, 1.1), -0.14 * r); });
+    // cheeks
+    c.fillStyle = FACE.cheek;
+    for (const sx of [-1, 1]) { const a = sx * 0.8, vv = vis(a); if (vv > 0.1) { elli(px(a), 0.3 * r, 0.12 * r * vv, 0.12 * r); c.fill(); } }
+    // full beard round the jaw
+    if (look.beard >= 4) {
+      const bp = [[-1.32, 0.1], [-1.38, 0.55], [-1.0, 1.0], [-0.5, 1.25], [0, 1.36], [0.5, 1.25], [1.0, 1.0], [1.38, 0.55], [1.32, 0.1],
+        [1.05, 0.36], [0.6, 0.5], [0, 0.54], [-0.6, 0.5], [-1.05, 0.36]].map(([a, yy]) => [px(a, Math.abs(a) > 0.9 ? 1.04 : 1.0), yy * r]);
+      smooth(bp, true); c.fillStyle = FACE.hair; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+      c.strokeStyle = FACE.hairDark; c.lineWidth = lw * 0.55;
+      for (const a of [-0.7, -0.25, 0.25, 0.7]) {
+        if (vis(a) < 0.05) continue;
+        c.beginPath(); c.moveTo(px(a), 0.75 * r); c.quadraticCurveTo(px(a * 1.15) + 0.04 * r, 0.95 * r, px(a * 0.9), 1.15 * r); c.stroke();
+      }
+    }
+    // mouth
+    if (vis(0) > -0.1) {
+      const m1 = px(-0.38), m2 = px(0.38), mc = px(0);
+      if (whee) {
+        elli(mc, 0.7 * r, Math.max(0.05 * r, Math.abs(m2 - m1) * 0.32), 0.17 * r); c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+      } else if (Math.abs(m2 - m1) > 0.06 * r) {
+        c.beginPath(); c.moveTo(m1, 0.6 * r); c.quadraticCurveTo(mc, 0.94 * r, m2, 0.6 * r); c.closePath();
+        c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+        elli(mc, 0.74 * r, Math.abs(m2 - m1) * 0.2, 0.04 * r); c.fillStyle = FACE.tongue; c.fill();
+      }
+    }
+    // nose, sticking out in profile
+    if (vis(0) > -0.3) {
+      elli(px(0, 1.12), 0.2 * r, 0.16 * r * (0.6 + 0.4 * Math.abs(vis(0))), 0.14 * r);
+      c.fillStyle = FACE.skinShade; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+    }
+    // moustache
+    const st = STACHES[look.beard];
+    if (st) {
+      const kOf = (a) => 1.08 + Math.max(0, a - 0.6) * st.ext;
+      const stache = (upTo) => {
+        c.beginPath();
+        for (const sx of [-1, 1]) {
+          let pen = false;
+          for (const [a, yy] of st.pts) {
+            if (a > upTo) break;
+            if (vis(sx * a) < -0.05) { pen = false; continue; }
+            const X = px(sx * a, kOf(a)), Y = yy * r;
+            if (pen) c.lineTo(X, Y); else { c.moveTo(X, Y); pen = true; }
+          }
+        }
+      };
+      stache(99); c.lineWidth = r * (st.w + 0.07); c.strokeStyle = COL.ink; c.stroke();
+      if (st.bushy) { stache(0.6); c.lineWidth = r * 0.27; c.stroke(); }
+      stache(99); c.lineWidth = r * st.w; c.strokeStyle = FACE.stache; c.stroke();
+      if (st.bushy) { stache(0.6); c.lineWidth = r * 0.2; c.stroke(); }
+    }
+  }
+  if (hat === "base" && cyw > -0.3) visor();
+  c.restore();
+}
+
+function louiePose(v) {
+  const L = louiePos(v);
+  const heading = Math.atan2(Math.cos(v.A) * SY, -Math.sin(v.A));
+  let pitch = 0;
+  if (fx.overTop) pitch = (Math.PI / 2) * Math.min(1, Math.max(0, (v.e - E_REST) / (Math.PI / 2 - E_REST)));   // nose up as the arm swings vertical
+  else if (fx.loopV0 >= LOOP_V) pitch = TAU * Math.min(1, Math.max(0, (fx.loopV0 - v.vh) / (2 * fx.loopV0)));
+  const hc = Math.min(v.h, 4);
+  return { L, heading, pitch, hc, sc: R * 0.3 * (1 + hc * 0.06), looping: !fx.overTop && fx.loopV0 >= LOOP_V && v.h > 0.2 };
+}
+function drawLouie(v, t) {
+  const p = louiePose(v);
+  drawPlane(p.L.x, p.L.y, p.heading, p.sc, p.pitch, t);
+}
+/* Drawn after everything else so the arm and the tower never cover his face. */
+function drawLouieHead(v, t) {
+  const p = louiePose(v);
+  let k = Math.cos(p.pitch);
+  if (Math.abs(k) < 0.14) k = k < 0 ? -0.14 : 0.14;
+  const off = -0.13 * p.sc * k;
+  const r = Math.max(13, R * 0.088) * (1 + p.hc * 0.05);
+  const side = Math.cos(p.heading) >= 0 ? 1 : -1;
+  const hx = p.L.x + Math.cos(p.heading) * off, hy = p.L.y + Math.sin(p.heading) * off - r * 0.8;
+  // he looks where the plane is going, nudged a little toward the camera
+  const yaw = Math.atan2(-Math.sin(v.A), Math.cos(v.A) + 0.55);
+  drawLouieFace(ctx, hx, hy, r, {
+    t, yaw, wind: 1, look: currentLook(), mood: p.looping || fx.overTop ? "whee" : "grin",
+    rot: p.looping ? p.pitch * side : fx.overTop ? -0.5 * p.pitch * side : 0,
+  });
+}
+
+/* Louie in a round badge: the menu portrait and the Dress up Louie preview */
+function drawBadge(cv, t, o) {
+  const bctx = cv ? cv.getContext("2d") : null;
+  if (!bctx) return;
+  const css = cv.clientWidth || 140;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const px = Math.round(css * dpr);
+  if (cv.width !== px || cv.height !== px) { cv.width = px; cv.height = px; }   // a fresh canvas is 300 x 150
+  bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  bctx.clearRect(0, 0, css, css);
+  const m = css / 2, rad = css / 2 - 4;
+  bctx.save();
+  bctx.beginPath(); bctx.arc(m, m, rad, 0, TAU);
+  bctx.fillStyle = COL.cap; bctx.fill();
+  bctx.clip();
+  bctx.fillStyle = "rgba(255,255,255,0.18)";
+  for (let i = 0; i < 6; i++) { bctx.beginPath(); bctx.ellipse(m + Math.sin(t * 0.3 + i) * css * 0.45, css * (0.15 + i * 0.13), css * 0.16, css * 0.05, 0, 0, TAU); bctx.fill(); }
+  drawLouieFace(bctx, m, css * 0.54 + (reduceMotion ? 0 : Math.sin(t * 2) * css * 0.01), css * 0.24, Object.assign({ t, body: true }, o));
+  bctx.restore();
+  bctx.beginPath(); bctx.arc(m, m, rad, 0, TAU); bctx.lineWidth = 4; bctx.strokeStyle = COL.ink; bctx.stroke();
+}
+function drawPortrait(t) {
+  const whee = !reduceMotion && (t % 7) > 6;
+  drawBadge($("portrait"), t, { yaw: reduceMotion ? 0.35 : Math.sin(t * 0.7) * 0.75, wind: 0.35, mood: whee ? "whee" : "grin", look: settings.louie });
+}
+const turner = { base: 0.35, dragging: false, x0: 0, b0: 0 };
+function drawPreview(t) {
+  const sway = reduceMotion || turner.dragging ? 0 : Math.sin(t * 0.7) * 0.5;
+  drawBadge($("louie-preview"), t, { yaw: turner.base + sway, wind: 0.55, mood: (t % 6) > 5.2 ? "whee" : "grin", look: settings.louie });
+}
+
+const parts = [], pops = [];
+let shakeAmt = 0;
+function burst(x, y) {
+  const n = reduceMotion ? 4 : 11;
+  for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * R * 1.3, vy: -Math.random() * R * 1.1, r: Math.random() * TAU, vr: (Math.random() - 0.5) * 12, t: 0, life: 1 + Math.random() * 0.6 });
+}
+function pop(x, y, text, color, size, t) { pops.push({ x, y, text, color, size, t0: t }); }
+function drawParticles(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i];
+    q.t += dt; if (q.t > q.life) { parts.splice(i, 1); continue; }
+    q.vy += R * 1.3 * dt; q.vx *= 0.985; q.vy *= 0.97; q.x += q.vx * dt; q.y += q.vy * dt; q.r += q.vr * dt;
+    ctx.save(); ctx.globalAlpha = 1 - q.t / q.life; ctx.translate(q.x, q.y); ctx.rotate(q.r);
+    ell(0, 0, R * 0.032, R * 0.012); ctx.fillStyle = COL.white; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = COL.ink; ctx.stroke();
+    ctx.restore();
+  }
+}
+function drawPops(t) {
+  for (let i = pops.length - 1; i >= 0; i--) {
+    const q = pops[i], age = Math.max(0, t - q.t0);
+    if (age > 1) { pops.splice(i, 1); continue; }
+    const k = Math.min(1, age / 0.12);
+    const sc = reduceMotion ? 1 : 0.5 + 0.5 * k + 0.15 * Math.sin(k * Math.PI);
+    ctx.save(); ctx.globalAlpha = age > 0.7 ? 1 - (age - 0.7) / 0.3 : 1;
+    ctx.translate(q.x, q.y - age * R * 0.22); ctx.scale(sc, sc); ctx.rotate(-0.06);
+    ctx.font = `${Math.round(q.size)}px ${FONT_D}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineJoin = "round"; ctx.lineWidth = q.size * 0.2; ctx.strokeStyle = COL.ink; ctx.strokeText(q.text, 0, 0);
+    ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
+    ctx.restore();
+  }
+}
+
+function draw(v, t, dt) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (shakeAmt > 0.3 && !reduceMotion) ctx.translate((Math.random() - 0.5) * shakeAmt, (Math.random() - 0.5) * shakeAmt);
+  shakeAmt *= Math.exp(-dt / 0.1);
+  drawBoard(v);
+  const sp = P(v.rho, v.A, 0), hh = Math.min(v.h, 3);
+  ctx.fillStyle = `rgba(20,40,10,${(0.34 * (1 - hh / 4.2)).toFixed(3)})`;
+  ell(sp.x, sp.y, R * 0.14 * (1 - hh / 6), R * 0.14 * SY * (1 - hh / 6)); ctx.fill();
+  const items = [];
+  for (let s = 0; s < 4; s++) {
+    const a = SEAT_ANGLES[s];
+    items.push([Math.sin(a) * 1.7, () => drawBarn(s, v)]);
+    items.push([Math.sin(a + PAD_OFF) * 1.1, () => drawPaddle(s, v)]);
+    if (v.inGame & (1 << s)) for (let j = 0; j < 3; j++) items.push([Math.sin(a + CHICK_OFF[j]) + j * 1e-3, () => drawChicken(s, j, v, t)]);
+  }
+  items.push([0, () => drawTower(v)]);
+  items.push([Math.sin(v.A) + 0.06, () => drawLouie(v, t)]);
+  items.sort((x, y) => x[0] - y[0]);
+  for (const it of items) it[1]();
+  drawLouieHead(v, t);
+  drawParticles(dt);
+  drawPops(t);
+}
+
+/* ---------- events seen by the screen (works the same for host and guests) ---------- */
+const fx = { key: "", prev: null, fallT: new Array(12).fill(-99), loopV0: 0, overTop: false };
+function detectEvents(v, t, audible) {
+  if (fx.key !== v.key) { fx.key = v.key; fx.prev = v; fx.fallT.fill(-99); fx.loopV0 = 0; fx.overTop = false; return; }
+  const p = fx.prev;
+  for (let s = 0; s < 4; s++) {
+    if (!(v.inGame & (1 << s))) continue;
+    if (v.lift[s] > 0.3 && p.lift[s] < 0.12 && audible) Sound.whack();
+    if (v.hp[s] > p.hp[s]) {
+      const q = P(0.95, SEAT_ANGLES[s] + PAD_OFF, 1.5);
+      const band = v.hb[s];
+      fx.overTop = band === 3;
+      fx.loopV0 = band === 2 ? v.vh : 0;          // the long jump over the next player is a real looping
+      pop(q.x, q.y, ["HOP", "WHAM!", "LOOPING!", "ALL THE WAY UP!"][band], SEAT_COL[s].c, R * [0.14, 0.17, 0.19, 0.17][band], t);
+      if (audible) { if (band === 3) Sound.whoosh(); else Sound.boing(3 + band * 2); }
+    }
+  }
+  const lost = p.cm & ~v.cm;
+  if (lost) for (let b = 0; b < 12; b++) {
+    if (!(lost & (1 << b))) continue;
+    const s = (b / 3) | 0, j = b % 3;
+    fx.fallT[b] = t;
+    const q = P(1, SEAT_ANGLES[s] + CHICK_OFF[j], 0.25);
+    burst(q.x, q.y);
+    shakeAmt = Math.max(shakeAmt, R * 0.028);
+    if (audible) Sound.squawk();
+    if (!seatChicks(v.cm, s)) {
+      const qb = P(1.7, SEAT_ANGLES[s], 1.7);
+      pop(qb.x, qb.y, "OUT!", SEAT_COL[s].c, R * 0.2, t);
+      if (audible) setTimeout(() => Sound.knockedOut(), 420);
+    }
+  }
+  if (v.fl !== p.fl) fx.overTop = true;
+  if (v.h <= 1e-6 && v.vh <= 1e-6) { fx.loopV0 = 0; fx.overTop = false; }
+  fx.prev = v;
+}
+
+/* Smooth over jumps (a late online hit, a corrected guess) instead of teleporting Louie.
+   Going over the top is a real jump of half a turn, so it is never smoothed. */
+const sm = { key: "", fl: 0, A: 0, e: 0, ve: 0, oA: 0, oE: 0, w: 3.5 };
+function withHeight(v) { v.h = hOf(v.e); v.vh = vhOf(v.e, v.ve); v.rho = rhoOf(v.e); return v; }
+function smoothView(v, dt) {
+  if (sm.key !== v.key || sm.fl !== v.fl) { sm.key = v.key; sm.fl = v.fl; sm.A = v.A; sm.e = v.e; sm.ve = v.ve; sm.oA = 0; sm.oE = 0; return v; }
+  if (v.status === "play" && dt > 0) {
+    const dA = v.A - sm.A, eA = sm.w * dt;
+    if (Math.abs(dA - eA) > 0.06 + 0.5 * eA) sm.oA -= dA - eA;
+    else sm.w = sm.w * 0.8 + (dA / dt) * 0.2;
+    const de = v.e - sm.e, ee = sm.ve * dt;
+    if (Math.abs(de - ee) > 0.04) sm.oE -= de - ee;
+  }
+  const k = Math.exp(-dt / 0.09);
+  sm.oA *= k; sm.oE *= k;
+  sm.A = v.A; sm.e = v.e; sm.ve = v.ve;
+  if (Math.abs(sm.oA) < 1e-4 && Math.abs(sm.oE) < 1e-4) return v;
+  return withHeight(Object.assign({}, v, { A: v.A + sm.oA, e: Math.max(E_REST, Math.min(Math.PI / 2, v.e + sm.oE)) }));
+}
+
+/* ======================================================================
+   App state, screens and HUD
+   ====================================================================== */
+const app = {
+  mode: "demo",           // demo | local | host | client
+  demo: null, demoId: 0, demoOverAt: 0,
+  match: null, gameId: 0, paused: false,
+  localSeats: null, mirror: null,
+  prevStatus: "", goUntil: 0,
+};
+const screens = { menu: $("scr-menu"), louie: $("scr-louie"), local: $("scr-local"), online: $("scr-online"), table: $("scr-table"), pause: $("scr-pause"), over: $("scr-over") };
+let currentScreen = "menu";
+function showScreen(name) {
+  const relayout = (currentScreen === "menu") !== (name === "menu");
+  currentScreen = name;
+  for (const k in screens) screens[k].hidden = k !== name;
+  if (relayout && W) { layout(); parts.length = 0; pops.length = 0; }
+}
+let toastTimer = 0;
+function toast(msg) {
+  const el = $("toast"); el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
+}
+function newDemo() {
+  app.demoId++; app.demoOverAt = 0;
+  app.demo = new Match({ seats: [{ type: "cpu", d: "hard" }, { type: "cpu", d: "normal" }, { type: "cpu", d: "hard" }, { type: "cpu", d: "normal" }], speed: "normal", countdown: 0 });
+}
+
+function leverView(get) {
+  const lift = [], hold = [];
+  for (let s = 0; s < 4; s++) { const l = get(s); lift.push(l.lift); hold.push(l.held ? l.hold : 0); }
+  return { lift, hold };
+}
+function viewFromMatch(m, key) {
+  const S = m.S;
+  return withHeight({ key, status: m.status, cd: m.cd, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, cm: m.committed, hp: S.hp.slice(), hb: S.hb.slice(), inGame: m.inGame, winner: m.winner, ...leverView((s) => m.leverOf(s)) });
+}
+function viewFromMirror(mi, now) {
+  const snap = mi.snap;
+  const R2 = mi.predict(now, sendClaim);
+  const tau = mi.hostTime(now);
+  const age = Math.max(0, tau - snap.t);
+  return withHeight({
+    key: "client" + snap.r, status: snap.st, cd: snap.cd, gt: R2.gt, A: R2.A, e: R2.e, ve: R2.ve, fl: R2.fl, al: R2.al, cm: snap.cm, hp: R2.hp, hb: R2.hb,
+    inGame: snap.g, winner: snap.w,
+    ...leverView((s) => (s === mi.mySeat ? mi.ownLever(tau) : { lift: snap.lv[s] / 100, held: snap.hd[s] > 0, hold: snap.hd[s] / 1000 })),
+  });
+}
+
+/* Who sits where, for the HUD and the game-over card */
+function seatInfo(s) {
+  if (app.mode === "local" && app.localSeats) {
+    const st = app.localSeats[s];
+    if (st.type === "human") return { name: st.name, sub: "Player", key: KEYS[s].toUpperCase() };
+    return { name: st.name, sub: "CPU · " + DIFF_LABEL[st.d], key: "CPU" };
+  }
+  if ((app.mode === "host" || app.mode === "client") && net.lobby) {
+    const st = net.lobby.seats[s];
+    if (!st) return { name: SEAT_NAMES[s], sub: "", key: "" };
+    if (st.k === "h") return { name: st.nick || "Host", sub: net.isHost ? "You · host" : "Host", key: net.isHost ? "YOU" : "NET" };
+    if (st.k === "r") { const me = !net.isHost && st.peer === net.myPeer; return { name: st.nick || "Player", sub: me ? "You" : "Online", key: me ? "YOU" : "NET" }; }
+    if (st.k === "c") return { name: "CPU " + SEAT_NAMES[s], sub: "CPU · " + DIFF_LABEL[st.d || "normal"], key: "CPU" };
+  }
+  return { name: SEAT_NAMES[s], sub: "", key: "" };
+}
+const hudCache = ["", "", "", ""];
+function updateHud(v) {
+  for (let s = 0; s < 4; s++) {
+    const inGame = (v.inGame & (1 << s)) !== 0;
+    const n = bits3(seatChicks(v.cm, s));
+    const info = seatInfo(s);
+    const sig = [inGame, n, info.name, info.sub, info.key].join("|");
+    if (sig === hudCache[s]) continue;
+    hudCache[s] = sig;
+    const card = $("card-" + s);
+    card.hidden = !inGame;
+    if (!inGame) continue;
+    card.classList.toggle("out", n === 0);
+    $("card-name-" + s).textContent = info.name;
+    $("card-sub-" + s).textContent = n === 0 ? "Out" : info.sub;
+    const k = $("card-key-" + s);
+    k.textContent = info.key; k.classList.toggle("small", info.key.length > 1);
+    const eggs = $("card-flock-" + s).children;
+    for (let j = 0; j < 3; j++) eggs[j].classList.toggle("lost", j >= n);
+  }
+}
+let bannerText = "";
+const faster = { key: "", n: 0, until: 0 };
+function updateBanner(v) {
+  const n = Math.ceil(speedUps(v.gt));
+  if (faster.key !== v.key || v.status !== "play") { faster.key = v.key; faster.n = n; }
+  else if (n > faster.n) { faster.n = n; faster.until = performance.now() + 1100; Sound.faster(); }
+  let text = "";
+  if (v.status === "countdown") text = String(Math.max(1, Math.ceil(v.cd)));
+  else if (performance.now() < app.goUntil) text = "GO!";
+  else if (performance.now() < faster.until) text = "FASTER!";
+  if (text === bannerText) return;
+  bannerText = text;
+  const el = $("banner");
+  el.textContent = text;
+  el.classList.toggle("minor", text === "FASTER!");
+  el.classList.remove("pop"); void el.offsetWidth; if (text) el.classList.add("pop");
+  if (v.status === "countdown" && text) Sound.tick();
+}
+function watchStatus(v) {
+  if (v.status === app.prevStatus) return;
+  const was = app.prevStatus;
+  app.prevStatus = v.status;
+  if (v.status === "play" && was === "countdown") { app.goUntil = performance.now() + 700; Sound.go(); }
+  if (v.status === "over") { showOver(v); Sound.win(); }
+}
+function enterGame() {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  showScreen(null);
+  hudCache.fill("");
+  $("hud").hidden = false;
+  $("controls").hidden = false;
+  $("btn-pause").hidden = app.mode !== "local";
+  app.prevStatus = "";
+  keyLabels = [0, 1, 2, 3].map((s) => {
+    if (app.mode === "local") return app.localSeats[s].type === "human" ? KEYS[s].toUpperCase() : "";
+    return "";
+  });
+  const touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  const hint = $("hint");
+  if (app.mode === "local") {
+    const humans = humanSeats();
+    hint.textContent = touch ? (humans.length > 1 ? "Each player taps their own corner to flip their lever" : "Tap anywhere to flip your lever")
+      : (humans.length ? "Levers: " + humans.map((s) => KEYS[s].toUpperCase()).join(", ") + (humans.length === 1 ? " or Space" : "") + ". Tap to hop, hold to jump further." : "Sit back and watch the CPUs");
+  } else {
+    hint.textContent = touch ? "Tap to hop, hold to jump further" : "Your lever: Space. Tap to hop, hold to jump further.";
+  }
+  hint.hidden = false;
+  setTimeout(() => { hint.hidden = true; }, 4200);
+}
+function exitGame() {
+  $("hud").hidden = true; $("controls").hidden = true; $("hint").hidden = true;
+  $("banner").textContent = ""; bannerText = "";
+  Sound.motorLevel(0, 3);
+}
+function humanSeats() {
+  if (app.mode !== "local" || !app.localSeats) return [];
+  return [0, 1, 2, 3].filter((s) => app.localSeats[s].type === "human");
+}
+
+function showOver(v) {
+  const w = v.winner;
+  const card = $("over-card");
+  const info = w >= 0 ? seatInfo(w) : null;
+  card.style.setProperty("--seat", w >= 0 ? `var(--${SEAT_TOKENS[w]})` : "var(--sun)");
+  $("over-title").textContent = info ? `${info.name} wins!` : "Louie wins!";
+  const left = w >= 0 ? bits3(seatChicks(v.cm, w)) : 0;
+  $("over-sub").textContent = info ? `${info.name} kept ${left} chicken${left === 1 ? "" : "s"} on the perch.` : "Every chicken on the farm got knocked over.";
+  const acts = $("over-actions"); acts.textContent = "";
+  const add = (label, cls, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn " + cls; b.textContent = label; b.addEventListener("click", fn); acts.append(b); return b; };
+  if (app.mode === "local") {
+    add("Main menu", "alt", toMenu);
+    add("Change players", "alt", () => { app.mode = "demo"; app.match = null; exitGame(); renderLocalSetup(); showScreen("local"); });
+    add("Play again", "go", startLocal);
+  } else if (app.mode === "host") {
+    add("Leave table", "alt", () => leaveTable(""));
+    add("New round", "go", hostBackToLobby);
+  } else {
+    const p = document.createElement("p"); p.className = "note"; p.textContent = `Waiting for ${net.hostNick || "the host"} to start a new round.`;
+    acts.append(p);
+    add("Leave table", "alt", () => leaveTable(""));
+  }
+  showScreen("over");
+}
+function toMenu() {
+  app.mode = "demo"; app.match = null; app.paused = false;
+  exitGame(); showScreen("menu");
+}
+
+/* ---------- local game ---------- */
+function startLocal() {
+  const seats = settings.seats.map((st) => ({ type: st.type, d: st.d }));
+  if (seats.filter((x) => x.type !== "off").length < 2) { $("local-error").textContent = "Add at least two players or CPUs to start."; return; }
+  $("local-error").textContent = "";
+  Sound.ensure();
+  app.localSeats = settings.seats.map((st, s) => Object.assign({}, st, { name: cleanName(st.name, SEAT_NAMES[s]) }));
+  app.match = new Match({ seats, speed: settings.speed });
+  app.gameId++; app.mode = "local"; app.paused = false;
+  enterGame();
+}
+function pressLocal(s) { if (app.match) app.match.press(s); }
+function releaseLocal(s) { if (app.match) app.match.release(s); }
+function togglePause(force) {
+  if (app.mode !== "local" || !app.match || app.match.status === "over") return;
+  app.paused = force == null ? !app.paused : force;
+  showScreen(app.paused ? "pause" : null);
+  $("btn-pause").textContent = app.paused ? "Resume" : "Pause";
+}
+
+function segInit(id, get, set) {
+  const seg = $(id);
+  const paint = () => { for (const b of seg.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === get())); };
+  seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.disabled) return; set(b.dataset.v); paint(); });
+  paint();
+  return paint;
+}
+function renderLocalSetup() {
+  const wrap = $("local-seats");
+  wrap.textContent = "";
+  settings.seats.forEach((st, s) => {
+    const row = document.createElement("div");
+    row.className = "seat-row"; row.style.setProperty("--seat", `var(--${SEAT_TOKENS[s]})`);
+    const key = document.createElement("span"); key.className = "key"; key.textContent = KEYS[s].toUpperCase(); key.setAttribute("aria-hidden", "true");
+    const name = document.createElement("input");
+    name.className = "field"; name.id = "seat-name-" + s; name.maxLength = 16; name.value = st.name;
+    name.setAttribute("aria-label", `${SEAT_NAMES[s]} seat name`);
+    name.addEventListener("input", () => { st.name = name.value.slice(0, 16); saveSettings(); });
+    name.addEventListener("blur", () => { st.name = cleanName(name.value, SEAT_NAMES[s]); name.value = st.name; saveSettings(); });
+    const seg = document.createElement("div"); seg.className = "seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", `${SEAT_NAMES[s]} seat`);
+    const diff = document.createElement("select");
+    diff.className = "field"; diff.id = "seat-diff-" + s; diff.setAttribute("aria-label", `${SEAT_NAMES[s]} CPU level`);
+    for (const d of ["easy", "normal", "hard"]) { const o = document.createElement("option"); o.value = d; o.textContent = DIFF_LABEL[d]; diff.append(o); }
+    diff.value = st.d;
+    diff.addEventListener("change", () => { st.d = diff.value; saveSettings(); });
+    const paint = () => {
+      for (const b of seg.children) b.setAttribute("aria-pressed", String(b.dataset.v === st.type));
+      diff.classList.toggle("invisible", st.type !== "cpu");
+      row.style.opacity = st.type === "off" ? "0.55" : "1";
+    };
+    for (const [v, label] of [["human", "Player"], ["cpu", "CPU"], ["off", "Off"]]) {
+      const b = document.createElement("button"); b.type = "button"; b.dataset.v = v; b.textContent = label;
+      b.addEventListener("click", () => { st.type = v; saveSettings(); paint(); $("local-error").textContent = ""; });
+      seg.append(b);
+    }
+    paint();
+    row.append(key, name, seg, diff);
+    wrap.append(row);
+  });
+}
+
+/* ======================================================================
+   Online play. On claude.ai the page's "room" connects everyone who has it open.
+   A table is a named room: the host runs the Match and shares snapshots
+   through presence; guests share their lever presses and hits the same way.
+   Anywhere else (the public copy on GitHub Pages) peerRoom() stands in for
+   the room, peer to peer over WebRTC.
+   ====================================================================== */
+const net = {
+  room: null, state: "pending", connected: false, p2p: false, busy: false, invite: "",
+  table: null, code: "", isHost: false, myPeer: null,
+  lobby: null, round: 0, hostNick: "", lastHostPresence: null,
+  hostMissingSince: 0, everSawHost: false, peerSeen: new Map(), lastAd: "", lastLobbyPush: "",
+};
+function useCap(name) {
+  try {
+    if (window.claude && typeof window.claude.use === "function") return Promise.resolve(window.claude.use(name));
+  } catch (e) { /* not in a viewer */ }
+  return Promise.resolve(null);
+}
+const inClaude = () => !!(window.claude && typeof window.claude.use === "function");
+
+/* Peer-to-peer tables (PeerJS). The host's browser is the table: it takes the
+   PeerJS id for the table code, guests connect straight to it, and it sends its
+   presence to every guest. Guests only need the host's presence, so theirs goes
+   to the host alone. Copies just the parts of the room API the game uses. */
+const PEER_PREFIX = "pb-looping-louie-";
+const PEER_QUIET = 8000;       // ms without a message before a connection counts as gone
+function loadPeerJs() {
+  return new Promise((ok, fail) => {
+    if (window.Peer) { ok(window.Peer); return; }
+    const s = document.createElement("script");
+    s.src = "peerjs.min.js";
+    s.onload = () => (window.Peer ? ok(window.Peer) : fail(new Error("no Peer")));
+    s.onerror = () => fail(new Error("PeerJS did not load"));
+    document.head.append(s);
+  });
+}
+function mergePresence(cur, patch) {
+  const o = Object.assign({}, cur);
+  for (const k of Object.keys(patch)) { if (patch[k] === null) delete o[k]; else o[k] = patch[k]; }
+  return o;
+}
+function peerRoom(Peer) {
+  const fail = (code) => Object.assign(new Error(code), { code });
+  function openTable(code, asHost) {
+    return new Promise((resolve, reject) => {
+      const peer = asHost ? new Peer(PEER_PREFIX + code, { debug: 0 }) : new Peer({ debug: 0 });
+      const me = { peer: "", sameTab: true, kind: "viewer", presence: null };
+      const others = new Map();          // peer id -> { peer, kind, presence, conn, last }
+      const listeners = [];
+      let settled = false, closed = false, hostConn = null, beat = 0;
+      const peers = () => [me, ...others.values()].map((p) => ({ peer: p.peer, sameTab: !!p.sameTab, kind: p.kind, presence: p.presence }));
+      const emit = () => { if (!closed) for (const fn of listeners) fn({ peers: peers() }); };
+      const drop = (id, conn) => {
+        const o = others.get(id);
+        if (!o || o.conn !== conn) return;
+        others.delete(id);
+        try { conn.close(); } catch (e) { /* already closed */ }
+        emit();
+      };
+      const send = (conn, msg) => { try { if (conn.open) conn.send(msg); } catch (e) { /* closing */ } };
+      const t = {
+        peers,
+        onPeers(fn) { listeners.push(fn); queueMicrotask(() => { if (!closed) fn({ peers: peers() }); }); },
+        presence(patch) {
+          me.presence = mergePresence(me.presence, patch);
+          if (asHost) for (const o of others.values()) send(o.conn, { t: "h", p: me.presence });
+          else if (hostConn) send(hostConn, { t: "g", p: me.presence });
+          return Promise.resolve();
+        },
+        leave() {
+          closed = true; clearInterval(beat);
+          for (const o of others.values()) try { o.conn.close(); } catch (e) { /* gone */ }
+          others.clear();
+          try { peer.destroy(); } catch (e) { /* gone */ }
+          return Promise.resolve();
+        },
+      };
+      const settle = (err) => {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (err) { t.leave(); reject(err); return; }
+        // heartbeat: a tab that closes without saying goodbye drops out after PEER_QUIET
+        beat = setInterval(() => {
+          const now = performance.now();
+          for (const o of [...others.values()]) {
+            if (now - o.last > PEER_QUIET) drop(o.peer, o.conn);
+            else send(o.conn, { t: "k" });
+          }
+        }, 2000);
+        resolve(t);
+      };
+      const timer = setTimeout(() => settle(fail("timeout")), 15000);
+      const track = (conn, onData) => {
+        conn.on("data", (m) => {
+          const o = others.get(conn.peer);
+          if (!o || o.conn !== conn || !m || typeof m !== "object") return;
+          o.last = performance.now();
+          if (m.p && typeof m.p === "object" && !Array.isArray(m.p)) onData(o, m);
+        });
+        conn.on("close", () => drop(conn.peer, conn));
+        conn.on("error", () => drop(conn.peer, conn));
+      };
+      peer.on("open", (id) => {
+        me.peer = id;
+        if (asHost) { settle(null); return; }
+        const conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "json" });
+        conn.on("open", () => {
+          hostConn = conn;
+          others.set(conn.peer, { peer: conn.peer, kind: "viewer", presence: null, conn, last: performance.now() });
+          if (me.presence) send(conn, { t: "g", p: me.presence });
+          settle(null);
+        });
+        track(conn, (o, m) => { if (m.t === "h") { o.presence = m.p; emit(); } });
+      });
+      if (asHost) peer.on("connection", (conn) => {
+        conn.on("open", () => {
+          if (closed || others.size >= 8) { conn.close(); return; }
+          others.set(conn.peer, { peer: conn.peer, kind: "viewer", presence: null, conn, last: performance.now() });
+          if (me.presence) send(conn, { t: "h", p: me.presence });
+          emit();
+        });
+        track(conn, (o, m) => { if (m.t === "g") { o.presence = m.p; emit(); } });
+      });
+      peer.on("error", (err) => {
+        const type = err && err.type;
+        if (!settled) settle(fail(type === "unavailable-id" ? "taken" : type === "peer-unavailable" ? "no_table" : "network"));
+      });
+      // lost the PeerJS server: open connections keep working, but new guests need it to find the host
+      peer.on("disconnected", () => { if (settled && !closed && asHost) setTimeout(() => { if (!closed) try { peer.reconnect(); } catch (e) { /* destroyed */ } }, 1500); });
+    });
+  }
+  return {
+    peers: () => [],
+    presence: () => Promise.resolve(),
+    onPeers() {},
+    onConnection(fn) {
+      const f = () => fn(navigator.onLine !== false);
+      window.addEventListener("online", f); window.addEventListener("offline", f);
+      f();
+    },
+    join: (code) => openTable(code, false),
+    hostJoin: (code) => openTable(code, true),
+  };
+}
+function initPeerNet() {
+  net.p2p = true;
+  const h = decodeURIComponent(location.hash.slice(1)).trim().toLowerCase();
+  if (CODE_RE.test(h)) {               // opened from an invite link
+    net.invite = h;
+    $("code-input").value = h; $("nick").value = settings.nick;
+    showScreen("online");
+  }
+  loadPeerJs().then((Peer) => {
+    net.room = peerRoom(Peer); net.state = "ready";
+    net.room.onConnection((c) => { net.connected = c; renderOnline(); });
+    renderOnline();
+  }).catch(() => { net.state = "off"; renderOnline(); });
+}
+function initNet() {
+  if (!inClaude()) { initPeerNet(); return; }
+  useCap("room").then((room) => {
+    if (!room) { net.state = "off"; renderOnline(); return; }
+    net.room = room; net.state = "ready";
+    room.onConnection((c) => { net.connected = c; renderOnline(); }, () => { net.state = "off"; renderOnline(); });
+    room.onPeers(() => { if (currentScreen === "online") renderTableList(); }, () => { net.state = "off"; renderOnline(); });
+    renderOnline();
+  }).catch(() => { net.state = "off"; renderOnline(); });
+}
+function myNick() {
+  const v = cleanName($("nick").value, "");
+  if (v) { settings.nick = v; saveSettings(); return v; }
+  if (!settings.nick) { settings.nick = "Farmer " + (10 + Math.floor(Math.random() * 90)); saveSettings(); }
+  $("nick").value = settings.nick;
+  return settings.nick;
+}
+function renderOnline() {
+  const dot = $("net-dot"), txt = $("net-status");
+  const ready = net.state === "ready";
+  dot.className = "dot " + (net.state === "off" ? "" : ready && net.connected ? "on" : "wait");
+  txt.textContent = net.state === "pending" ? "Connecting…"
+    : net.state === "off" ? (net.p2p ? "Online play couldn't start. Check your connection and reload the page."
+      : "Online play isn't available in this view. On claude.ai you need to be signed in and invited to this page; a public link isn't enough.")
+    : !net.connected ? (net.p2p ? "You're offline." : "Reconnecting…")
+    : !net.p2p ? "Online. Open tables appear below as soon as someone starts one."
+    : net.invite ? `You're invited to table ${net.invite}. Add your name and tap Join.`
+    : "Online. Start a table and send friends the invite link, or join with a code.";
+  $("net-alt").hidden = net.p2p || net.state !== "off";
+  $("tables-head").hidden = $("table-list").hidden = net.p2p;
+  $("online-note").textContent = net.p2p
+    ? "Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends just open your invite link while you're at the table. No sign-in needed."
+    : "Everyone plays on their own screen with one lever: Space, or a tap anywhere. Friends need this page open on claude.ai at the same time, signed in with access to it.";
+  $("host-table").disabled = !ready || net.busy;
+  $("join-code").disabled = !ready || net.busy;
+  if (currentScreen === "online") renderTableList();
+}
+function renderTableList() {
+  const list = $("table-list");
+  list.textContent = "";
+  const empty = (msg) => { const li = document.createElement("li"); li.className = "empty"; li.textContent = msg; list.append(li); };
+  if (!net.room) { empty(net.state === "pending" ? "Looking for tables…" : "No tables can be shown in this view."); return; }
+  const seen = new Set();
+  const ads = [];
+  for (const p of net.room.peers()) {
+    if (p.sameTab || !p.presence) continue;
+    const a = p.presence.louieTable;
+    if (!a || typeof a !== "object" || typeof a.code !== "string" || !CODE_RE.test(a.code) || seen.has(a.code)) continue;
+    seen.add(a.code);
+    ads.push({ code: a.code, nick: cleanName(a.nick, "Someone"), n: Math.max(1, Math.min(4, Number.isInteger(a.n) ? a.n : 1)), playing: a.st === "playing" });
+  }
+  if (!ads.length) { empty("No open tables right now. Start one, then ask friends to open this page and pick it here."); return; }
+  for (const a of ads) {
+    const li = document.createElement("li");
+    const g = document.createElement("div"); g.className = "grow";
+    const t1 = document.createElement("div"); t1.className = "t1"; t1.textContent = `${a.nick}'s table`;
+    const t2 = document.createElement("div"); t2.className = "t2"; t2.textContent = `${a.n} of 4 seats taken · ${a.playing ? "Playing, join to watch" : "Waiting for players"}`;
+    g.append(t1, t2);
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn small"; b.textContent = "Join";
+    b.addEventListener("click", () => joinTable(a.code));
+    li.append(g, b); list.append(li);
+  }
+}
+function randCode() {
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return "louie-" + s;
+}
+function joinErrorText(e) {
+  const code = e && e.code;
+  if (code === "not_permitted") return "You can't join tables in this view. Check that you're signed in to claude.ai and can open this page.";
+  if (code === "limit_reached") return "Too many tables are open on this page right now. Try again in a moment.";
+  if (code === "no_table") return "Nobody is hosting a table with that code right now. Check the code, or ask for a fresh invite link.";
+  return "Couldn't reach the table. Check your connection and try again.";
+}
+function inviteLink() { return location.origin + location.pathname + "#" + net.code; }
+/* Only one table attempt at a time: a peer-to-peer table takes a second or two to open. */
+async function busyWhile(fn) {
+  if (net.busy) return;
+  net.busy = true; renderOnline();
+  try { await fn(); } finally { net.busy = false; renderOnline(); }
+}
+function seatsTaken() { return net.lobby ? net.lobby.seats.filter((st) => st.k !== "x").length : 1; }
+function updateAd() {
+  if (!net.room || !net.isHost || !net.table) return;
+  const ad = { code: net.code, nick: myNick(), n: seatsTaken(), st: app.mode === "host" ? "playing" : "open" };
+  const sig = JSON.stringify(ad);
+  if (sig === net.lastAd) return;
+  net.lastAd = sig;
+  net.room.presence({ louieTable: ad }).catch(() => {});
+}
+function hostTable() { return busyWhile(hostTableNow); }
+async function hostTableNow() {
+  if (!net.room) return;
+  $("online-error").textContent = "";
+  const nick = myNick();
+  let code, t;
+  for (let tries = 0; !t; tries++) {     // a peer-to-peer code can already be taken somewhere; pick another
+    code = randCode();
+    try { t = await (net.room.hostJoin ? net.room.hostJoin(code) : net.room.join(code)); }
+    catch (e) { if (e && e.code === "taken" && tries < 2) continue; $("online-error").textContent = joinErrorText(e); return; }
+  }
+  Sound.ensure();
+  Object.assign(net, { table: t, code, isHost: true, round: 0, lastAd: "", lastLobbyPush: "", peerSeen: new Map(), hostNick: nick });
+  net.lobby = { seats: [{ k: "h", nick }, { k: "x" }, { k: "x" }, { k: "x" }], sp: settings.speed, look: cleanLook(settings.louie) };
+  t.onPeers(onTablePeers, () => leaveTable("The connection to your table dropped."));
+  pushHostPresence(true);
+  updateAd();
+  showScreen("table"); renderTable();
+}
+function joinTable(code) { return busyWhile(() => joinTableNow(code)); }
+async function joinTableNow(code) {
+  code = String(code || "").trim().toLowerCase();
+  $("online-error").textContent = "";
+  if (!CODE_RE.test(code)) { $("online-error").textContent = "Table codes look like louie-ab12."; return; }
+  if (!net.room) return;
+  const nick = myNick();
+  let t;
+  try { t = await net.room.join(code); } catch (e) { $("online-error").textContent = joinErrorText(e); return; }
+  net.invite = "";
+  Sound.ensure();
+  Object.assign(net, { table: t, code, isHost: false, lobby: null, lastHostPresence: null, hostMissingSince: performance.now(), everSawHost: false, hostNick: "" });
+  app.mirror = new Mirror();
+  t.onPeers(onTablePeers, () => leaveTable("The connection to the table dropped."));
+  t.presence({ louie: 1, nick, p: 0, c: null }).catch(() => {});
+  showScreen("table"); renderTable();
+}
+function leaveTable(msg) {
+  const t = net.table;
+  net.table = null;
+  if (t) t.leave().catch(() => {});
+  if (net.isHost && net.room) net.room.presence({ louieTable: null }).catch(() => {});
+  net.isHost = false; net.lobby = null; net.lastAd = "";
+  app.mirror = null; app.match = null; app.mode = "demo";
+  exitGame();
+  showScreen("online"); renderOnline();
+  $("online-error").textContent = msg || "";
+}
+function pushHostPresence(force) {
+  const t = net.table;
+  if (!t || !net.isHost) return;
+  const playing = app.mode === "host" && app.match;
+  const lobbySig = JSON.stringify(net.lobby);
+  if (!playing && !force && lobbySig === net.lastLobbyPush) return;
+  net.lastLobbyPush = lobbySig;
+  t.presence({
+    louie: 1, host: true, nick: net.hostNick, lobby: net.lobby,
+    s: playing ? app.match.snapshot(net.round) : { r: net.round, st: "lobby" },
+  }).catch(() => {});
+}
+function onTablePeers(ch) {
+  const me = ch.peers.find((p) => p.sameTab);
+  if (me) net.myPeer = me.peer;
+  if (net.isHost) hostHandlePeers(ch.peers); else clientHandlePeers(ch.peers);
+}
+function hostHandlePeers(peers) {
+  const L = net.lobby;
+  if (!L) return;
+  const others = peers.filter((p) => !p.sameTab && p.kind === "viewer" && p.presence && p.presence.louie === 1 && p.presence.host !== true);
+  const ids = new Set(others.map((p) => p.peer));
+  let changed = false;
+  L.seats.forEach((st, s) => {
+    if (st.k !== "r" || ids.has(st.peer)) return;
+    changed = true;
+    if (app.mode === "host" && app.match) {
+      L.seats[s] = { k: "c", d: "normal" };
+      app.match.makeCpu(s);
+      toast(`${st.nick || "A player"} left. A CPU took over their barn.`);
+    } else L.seats[s] = { k: "x" };
+  });
+  if (app.mode !== "host") {
+    for (const p of others) {
+      if (L.seats.some((st) => st.peer === p.peer)) continue;
+      let free = L.seats.findIndex((st, i) => i > 0 && st.k === "x");
+      if (free < 0) free = L.seats.findIndex((st, i) => i > 0 && st.k === "c");
+      if (free < 0) break;
+      L.seats[free] = { k: "r", peer: p.peer, nick: cleanName(p.presence.nick, "Player") };
+      changed = true;
+    }
+  }
+  for (const p of others) {
+    const s = L.seats.findIndex((st) => st.k === "r" && st.peer === p.peer);
+    if (s < 0) continue;
+    const nk = cleanName(p.presence.nick, "Player");
+    if (nk !== L.seats[s].nick) { L.seats[s].nick = nk; changed = true; }
+    if (app.mode === "host" && app.match) {
+      const pr = p.presence;
+      const seen = net.peerSeen.get(p.peer) || { p: 0, u: 0 };
+      if (Number.isInteger(pr.p) && pr.p > seen.p) { seen.p = pr.p; app.match.remotePressed(s); }
+      if (Number.isInteger(pr.u) && pr.u > seen.u) { seen.u = pr.u; if (pr.u === seen.p) app.match.remoteReleased(s); }
+      net.peerSeen.set(p.peer, seen);
+      const c = pr.c;
+      if (c && typeof c === "object" && c.r === net.round && Number.isInteger(c.seq)) app.match.claim(s, c.seq, c.k, Number(c.v), c.b, Number(c.a));
+    }
+  }
+  if (changed) { pushHostPresence(true); updateAd(); if (currentScreen === "table") renderTable(); }
+}
+function sanitizeLobby(l) {
+  if (!l || typeof l !== "object" || !Array.isArray(l.seats)) return null;
+  const seats = [0, 1, 2, 3].map((i) => {
+    const st = l.seats[i];
+    if (!st || typeof st !== "object") return { k: "x" };
+    const k = ["h", "r", "c", "x"].includes(st.k) ? st.k : "x";
+    return { k, peer: typeof st.peer === "string" ? st.peer.slice(0, 80) : "", nick: cleanName(st.nick, k === "h" ? "Host" : "Player"), d: DIFF[st.d] ? st.d : "normal" };
+  });
+  return { seats, sp: SPEEDS[l.sp] ? l.sp : "normal", look: cleanLook(l.look) };
+}
+const num = (x, d) => (typeof x === "number" && Number.isFinite(x) ? x : d);
+const arr4 = (a, f) => [0, 1, 2, 3].map((i) => f(Array.isArray(a) ? a[i] : undefined));
+function sanitizeSnap(s) {
+  if (!s || typeof s !== "object") return null;
+  const st = ["lobby", "countdown", "play", "over"].includes(s.st) ? s.st : null;
+  if (!st) return null;
+  const out = { r: Number.isInteger(s.r) ? s.r : 0, st };
+  if (st === "lobby") return out;
+  return Object.assign(out, {
+    cd: num(s.cd, 0), t: num(s.t, 0), A: num(s.A, 0), e: Math.min(Math.PI / 2, Math.max(E_REST, num(s.e, E_REST))), ve: num(s.ve, 0),
+    fl: Number.isInteger(s.fl) ? s.fl : 0,
+    al: (Number.isInteger(s.al) ? s.al : 0) & 0xfff, cm: (Number.isInteger(s.cm) ? s.cm : 0) & 0xfff,
+    hp: arr4(s.hp, (x) => num(x, -1e6)), kp: arr4(s.kp, (x) => num(x, -1e6)),
+    lv: arr4(s.lv, (x) => Math.max(0, Math.min(100, num(x, 0)))), hd: arr4(s.hd, (x) => Math.max(0, Math.min(2000, num(x, 0)))),
+    ack: arr4(s.ack, (x) => (Number.isInteger(x) ? x : 0)), hb: arr4(s.hb, (x) => (Number.isInteger(x) && x >= 0 && x <= 3 ? x : 0)),
+    w: Number.isInteger(s.w) ? s.w : -1,
+    b: SPEEDS[s.b] ? s.b : "normal", g: (Number.isInteger(s.g) ? s.g : 0) & 15,
+  });
+}
+function clientHandlePeers(peers) {
+  const hosts = peers.filter((p) => !p.sameTab && p.presence && p.presence.louie === 1 && p.presence.host === true)
+    .sort((a, b) => (a.peer < b.peer ? -1 : 1));
+  const h = hosts[0];
+  if (!h) { if (!net.hostMissingSince) net.hostMissingSince = performance.now(); return; }
+  net.hostMissingSince = 0; net.everSawHost = true;
+  const pr = h.presence;
+  if (pr === net.lastHostPresence) return;
+  net.lastHostPresence = pr;
+  net.hostNick = cleanName(pr.nick, "the host");
+  const lobby = sanitizeLobby(pr.lobby);
+  const lobbyChanged = JSON.stringify(lobby) !== JSON.stringify(net.lobby);
+  net.lobby = lobby;
+  const mySeat = lobby ? lobby.seats.findIndex((st) => st.k === "r" && st.peer === net.myPeer) : -1;
+  const snap = sanitizeSnap(pr.s);
+  if (!snap || !app.mirror) { if (lobbyChanged && currentScreen === "table") renderTable(); return; }
+  app.mirror.mySeat = mySeat;
+  app.mirror.onSnap(snap, performance.now() / 1000);
+  if (snap.st === "lobby") {
+    if (app.mode === "client") { app.mode = "demo"; exitGame(); showScreen("table"); }
+    if (lobbyChanged || currentScreen === "table") renderTable();
+  } else if (app.mode !== "client") {
+    app.mode = "client";
+    enterGame();
+    if (mySeat < 0) toast("All seats are taken, so you're watching this round.");
+  }
+}
+function sendClaim(seq, k, v, b, a) {
+  if (!net.table || !app.mirror) return;
+  net.table.presence({ c: { r: app.mirror.round, seq, k, v: Math.round(v * 1e5) / 1e5, b, a: Math.floor(a * 1e6) / 1e6 } }).catch(() => {});
+}
+function clientPress() {
+  if (!app.mirror || !net.table) return;
+  const seq = app.mirror.press(performance.now() / 1000);
+  if (seq) net.table.presence({ p: seq }).catch(() => {});
+}
+function clientRelease() {
+  if (!app.mirror || !net.table) return;
+  const seq = app.mirror.release(performance.now() / 1000);
+  if (seq) net.table.presence({ u: seq }).catch(() => {});
+}
+function netWatchdog() {
+  if (!net.table || net.isHost || !net.hostMissingSince) return;
+  const wait = net.everSawHost ? 4000 : 9000;
+  if (performance.now() - net.hostMissingSince > wait) leaveTable(net.everSawHost ? "The host left, so the table closed." : "Nobody is hosting a table with that code right now.");
+}
+function hostStart() {
+  const L = net.lobby;
+  if (!L) return;
+  const seats = L.seats.map((st) => (st.k === "h" ? { type: "human" } : st.k === "r" ? { type: "remote" } : st.k === "c" ? { type: "cpu", d: st.d || "normal" } : { type: "off" }));
+  if (seats.filter((x) => x.type !== "off").length < 2) return;
+  Sound.ensure();
+  net.round++;
+  net.peerSeen = new Map();
+  app.match = new Match({ seats, speed: L.sp });
+  app.gameId++; app.mode = "host";
+  enterGame();
+  updateAd();
+}
+function hostBackToLobby() {
+  app.match = null; app.mode = "demo";
+  exitGame();
+  if (net.room && net.table) hostHandlePeers(net.table.peers());
+  pushHostPresence(true); updateAd();
+  showScreen("table"); renderTable();
+}
+let paintTableSpeed = null;
+function renderTable() {
+  $("table-code").textContent = net.code;
+  $("copy-code").textContent = net.p2p ? "Copy invite link" : "Copy code";
+  const list = $("table-seats");
+  list.textContent = "";
+  const L = net.lobby;
+  const startBtn = $("table-start");
+  startBtn.hidden = !net.isHost;
+  if (!L) {
+    const li = document.createElement("li"); li.className = "empty"; li.textContent = "Connecting to the host…"; list.append(li);
+    $("table-note").textContent = "";
+    for (const b of $("speed-table").children) b.disabled = true;
+    return;
+  }
+  L.seats.forEach((st, s) => {
+    const li = document.createElement("li");
+    li.style.setProperty("--seat", `var(--${SEAT_TOKENS[s]})`);
+    const sw = document.createElement("span"); sw.className = "swatch";
+    const g = document.createElement("div"); g.className = "grow";
+    const t1 = document.createElement("div"); t1.className = "t1";
+    const t2 = document.createElement("div"); t2.className = "t2";
+    if (st.k === "h") { t1.textContent = st.nick || "Host"; t2.textContent = net.isHost ? "You · host" : "Host"; }
+    else if (st.k === "r") { t1.textContent = st.nick || "Player"; t2.textContent = !net.isHost && st.peer === net.myPeer ? "You" : "Online player"; }
+    else if (st.k === "c") { t1.textContent = "CPU " + SEAT_NAMES[s]; t2.textContent = DIFF_LABEL[st.d] + " CPU"; }
+    else { t1.textContent = "Empty seat"; t2.textContent = SEAT_NAMES[s] + " barn"; li.style.opacity = "0.7"; }
+    g.append(t1, t2);
+    li.append(sw, g);
+    if (net.isHost && (st.k === "c" || st.k === "x")) {
+      const sel = document.createElement("select");
+      sel.className = "field"; sel.id = "tseat-" + s; sel.setAttribute("aria-label", `${SEAT_NAMES[s]} seat`);
+      for (const [v, label] of [["x", "Empty"], ["easy", "CPU, easy"], ["normal", "CPU, normal"], ["hard", "CPU, hard"]]) {
+        const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o);
+      }
+      sel.value = st.k === "x" ? "x" : st.d;
+      sel.addEventListener("change", () => {
+        L.seats[s] = sel.value === "x" ? { k: "x" } : { k: "c", d: sel.value };
+        pushHostPresence(true); updateAd(); renderTable();
+      });
+      li.append(sel);
+    }
+    list.append(li);
+  });
+  for (const b of $("speed-table").children) b.disabled = !net.isHost;
+  if (paintTableSpeed) paintTableSpeed();
+  const filled = L.seats.filter((st) => st.k !== "x").length;
+  startBtn.disabled = filled < 2;
+  let note;
+  if (net.isHost) note = filled < 2 ? (net.p2p ? "Waiting for players. Send friends your invite link, or the code. You can also fill seats with CPUs."
+    : "Waiting for players. Friends can pick your table under Play online, or join with the code. You can also fill seats with CPUs.")
+    : "Ready when you are. Your lever is Space, or a tap anywhere.";
+  else {
+    const mine = L.seats.findIndex((st) => st.k === "r" && st.peer === net.myPeer);
+    note = mine >= 0 ? `You have the ${SEAT_NAMES[mine].toLowerCase()} barn. Waiting for ${net.hostNick || "the host"} to start. Your lever is Space, or a tap anywhere.`
+      : "All seats are taken. You can watch the next round.";
+  }
+  $("table-note").textContent = note;
+}
+
+/* ======================================================================
+   Input
+   ====================================================================== */
+const typingTags = new Set(["INPUT", "SELECT", "TEXTAREA"]);
+const held = new Map();      // key or pointer -> the lever it is holding ("c" for my online lever)
+function inputDown(id, seat) {
+  if (held.has(id)) return;
+  if (app.mode === "client") { held.set(id, "c"); clientPress(); return; }
+  if (seat == null) return;
+  held.set(id, seat); pressLocal(seat);
+}
+function inputUp(id) {
+  if (!held.has(id)) return;
+  const seat = held.get(id);
+  held.delete(id);
+  if (seat === "c") { if (![...held.values()].includes("c")) clientRelease(); return; }
+  if (![...held.values()].includes(seat)) releaseLocal(seat);
+}
+function releaseAll() { for (const id of [...held.keys()]) inputUp(id); }
+window.addEventListener("keydown", (e) => {
+  if (e.target && typingTags.has(e.target.tagName)) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (k === "Escape") { if (app.mode === "local") togglePause(); return; }
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (app.mode === "demo" || currentScreen) return;
+  const isLever = k === " " || k === "Enter" || KEYS.includes(k);
+  if (!isLever) return;
+  if (app.mode === "local") {
+    const humans = humanSeats();
+    const s = KEYS.indexOf(k);
+    if (s >= 0 && humans.includes(s)) inputDown("k" + k, s);
+    else if ((k === " " || k === "Enter") && humans.length === 1) inputDown("k" + k, humans[0]);
+    else return;
+  } else inputDown("k" + k, 0);
+  e.preventDefault();
+});
+window.addEventListener("keyup", (e) => {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  inputUp("k" + k);
+});
+window.addEventListener("blur", releaseAll);
+$("stage").addEventListener("pointerdown", (e) => {
+  if (e.target.closest && e.target.closest("button")) return;
+  if (app.mode === "demo" || currentScreen) return;
+  e.preventDefault();
+  let seat = 0;
+  if (app.mode === "local") {
+    const right = e.clientX >= W / 2, bottom = e.clientY >= cy;
+    const quad = bottom ? (right ? 2 : 3) : (right ? 1 : 0);
+    const humans = humanSeats();
+    seat = humans.includes(quad) ? quad : humans.length === 1 ? humans[0] : null;
+  }
+  inputDown("p" + e.pointerId, seat);
+});
+window.addEventListener("pointerup", (e) => inputUp("p" + e.pointerId));
+window.addEventListener("pointercancel", (e) => inputUp("p" + e.pointerId));
+document.addEventListener("pointerdown", () => { if (Sound.ac) Sound.ensure(); }, { capture: true });
+document.addEventListener("visibilitychange", () => { if (document.hidden && app.mode === "local" && app.match && app.match.status === "play") togglePause(true); });
+window.addEventListener("resize", layout);
+
+function wireUi() {
+  $("go-local").addEventListener("click", () => { Sound.ensure(); renderLocalSetup(); showScreen("local"); });
+  $("go-online").addEventListener("click", () => { Sound.ensure(); $("nick").value = settings.nick; showScreen("online"); renderOnline(); });
+  $("go-louie").addEventListener("click", () => { renderLookControls(); showScreen("louie"); });
+  $("portrait").addEventListener("click", () => { renderLookControls(); showScreen("louie"); });
+  wireLookControls();
+  $("local-back").addEventListener("click", () => showScreen("menu"));
+  $("local-start").addEventListener("click", startLocal);
+  segInit("speed-local", () => settings.speed, (v) => { settings.speed = v; saveSettings(); });
+  paintTableSpeed = segInit("speed-table", () => (net.lobby ? net.lobby.sp : settings.speed), (v) => {
+    if (!net.isHost || !net.lobby) return;
+    net.lobby.sp = v; settings.speed = v; saveSettings(); pushHostPresence(true);
+  });
+  $("online-back").addEventListener("click", () => showScreen("menu"));
+  $("host-table").addEventListener("click", hostTable);
+  $("join-code").addEventListener("click", () => joinTable($("code-input").value));
+  $("code-input").addEventListener("keydown", (e) => { if (e.key === "Enter") joinTable($("code-input").value); });
+  $("nick").addEventListener("change", () => { myNick(); });
+  $("table-leave").addEventListener("click", () => leaveTable(""));
+  $("table-start").addEventListener("click", hostStart);
+  $("copy-code").addEventListener("click", () => {
+    const text = net.p2p ? inviteLink() : net.code;
+    if (net.p2p && navigator.share && matchMedia("(pointer: coarse)").matches) {   // phones: straight to WhatsApp and co.
+      navigator.share({ title: "Looping Louie", text: "Join my Looping Louie table", url: text }).catch(() => {});
+      return;
+    }
+    const done = () => toast(net.p2p ? "Invite link copied. Send it to your friends." : "Table code copied");
+    try {
+      navigator.clipboard.writeText(text).then(done, () => selectCode());
+    } catch (e) { selectCode(); }
+  });
+  $("pause-resume").addEventListener("click", () => togglePause(false));
+  $("pause-quit").addEventListener("click", toMenu);
+  $("btn-pause").addEventListener("click", () => togglePause());
+  $("btn-sound").addEventListener("click", () => {
+    Sound.ensure();
+    settings.sound = !settings.sound; saveSettings(); Sound.setOn(settings.sound); paintSound();
+  });
+  $("btn-quit").addEventListener("click", () => {
+    if (app.mode === "local") toMenu();
+    else if (app.mode === "host") hostBackToLobby();
+    else if (app.mode === "client") leaveTable("");
+  });
+}
+/* Dress up Louie */
+function currentLook() {
+  if (net.table && !net.isHost && net.lobby && net.lobby.look) return net.lobby.look;
+  return settings.louie;
+}
+function setLook(patch) {
+  settings.louie = cleanLook(Object.assign({}, settings.louie, patch));
+  saveSettings();
+  if (net.isHost && net.lobby) { net.lobby.look = cleanLook(settings.louie); pushHostPresence(true); }
+  renderLookControls();
+}
+function renderLookControls() {
+  const L = settings.louie;
+  for (const b of $("cfg-hat").children) b.setAttribute("aria-pressed", String(b.dataset.v === L.hat));
+  for (const b of $("cfg-hair").children) b.setAttribute("aria-pressed", String(b.dataset.v === L.hair));
+  $("cfg-beard").value = String(L.beard);
+  $("cfg-beard-name").textContent = BEARDS[L.beard];
+  $("cfg-beard").setAttribute("aria-valuetext", BEARDS[L.beard]);
+  $("cfg-glasses-name").textContent = GLASSES[L.glasses].name;
+  for (const b of $("cfg-glasses").children) b.setAttribute("aria-checked", String(b.dataset.v === L.glasses));
+  $("cfg-note").textContent = net.table && !net.isHost ? "At this online table everyone sees Louie the way the host dressed him." : net.isHost ? "Everyone at your table sees Louie this way." : "";
+}
+function wireLookControls() {
+  $("cfg-hat").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setLook({ hat: b.dataset.v }); });
+  $("cfg-hair").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setLook({ hair: b.dataset.v }); });
+  $("cfg-beard").addEventListener("input", () => setLook({ beard: Number($("cfg-beard").value) }));
+  const wrap = $("cfg-glasses");
+  for (const key of Object.keys(GLASSES)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.v = key; b.setAttribute("role", "radio");
+    b.setAttribute("aria-label", GLASSES[key].name); b.title = GLASSES[key].name;
+    b.style.setProperty("--sw", GLASSES[key].c);
+    b.addEventListener("click", () => setLook({ glasses: key }));
+    wrap.append(b);
+  }
+  $("cfg-reset").addEventListener("click", () => setLook(DEFAULT_LOOK));
+  $("cfg-done").addEventListener("click", () => showScreen("menu"));
+  const cv = $("louie-preview");
+  cv.addEventListener("pointerdown", (e) => { turner.dragging = true; turner.x0 = e.clientX; turner.b0 = turner.base; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
+  cv.addEventListener("pointermove", (e) => { if (turner.dragging) turner.base = turner.b0 + (e.clientX - turner.x0) * 0.015; });
+  const stop = () => { turner.dragging = false; };
+  cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+  renderLookControls();
+}
+function selectCode() {
+  const el = $("table-code");
+  const r = document.createRange(); r.selectNodeContents(el);
+  const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  toast("Select and copy the code above");
+}
+function paintSound() {
+  const b = $("btn-sound");
+  b.textContent = settings.sound ? "Sound on" : "Sound off";
+  b.setAttribute("aria-pressed", String(settings.sound));
+}
+
+/* ======================================================================
+   Main loop
+   ====================================================================== */
+let lastMs = performance.now();
+function frame(nowMs) {
+  const dt = Math.min(0.1, Math.max(0, (nowMs - lastMs) / 1000));
+  lastMs = nowMs;
+  const t = nowMs / 1000;
+  let v = null;
+  if (app.mode === "client") {
+    if (app.mirror && app.mirror.snap && app.mirror.snap.st !== "lobby") v = viewFromMirror(app.mirror, t);
+  } else if ((app.mode === "local" || app.mode === "host") && app.match) {
+    if (!(app.mode === "local" && app.paused)) app.match.update(dt);
+    v = viewFromMatch(app.match, app.mode + app.gameId);
+  }
+  const live = !!v;
+  if (!v) {
+    if (!app.demo) newDemo();
+    app.demo.update(dt);
+    if (app.demo.status === "over") {
+      if (!app.demoOverAt) app.demoOverAt = t;
+      else if (t - app.demoOverAt > 2.5) newDemo();
+    }
+    v = viewFromMatch(app.demo, "demo" + app.demoId);
+  }
+  detectEvents(v, t, live && settings.sound);
+  draw(smoothView(v, dt), t, dt);
+  if (live) { updateHud(v); updateBanner(v); watchStatus(v); }
+  if (currentScreen === "menu") drawPortrait(t);
+  else if (currentScreen === "louie") drawPreview(t);
+  Sound.motorLevel(live && v.status === "play" && !app.paused ? 0.03 : 0, sm.w);
+  if (app.mode === "host") pushHostPresence();
+  netWatchdog();
+  requestAnimationFrame(frame);
+}
+
+function boot(data) {
+  loadSettings();
+  if (data && data.settings) mergeSettings(data.settings);
+  Sound.on = settings.sound;
+  paintSound();
+  layout();
+  wireUi();
+  renderLocalSetup();
+  initNet();
+  newDemo();
+  requestAnimationFrame(frame);
+}
+const hot = window.claude && window.claude.hot;
+if (hot && typeof hot.snapshot === "function") hot.snapshot(() => ({ settings }));
+if (hot && typeof hot.ready === "function") hot.ready(boot);
+else boot((hot && hot.data) || {});
+})();
+</script>
+</body></html>
