@@ -41,9 +41,11 @@ body {
   background-color: var(--table-deep);
   -webkit-tap-highlight-color: transparent;
 }
-button, input, select { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 
 #stage { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+#scenery { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+:root[data-mode="aquigai"] #scenery { display: block; opacity: .78; }
 #board { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* ---------- HUD ---------- */
@@ -118,6 +120,23 @@ button, input, select { font: inherit; color: inherit; }
 }
 #hint { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 #toast { top: calc(64px + env(safe-area-inset-top, 0px)); }
+
+/* the instant replay's caption: a card from the game box, under the replay's TV (which places it) */
+#replay-card {
+  position: absolute; z-index: 6; left: 50%; transform: translateX(-50%);
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  width: max-content; max-width: min(520px, calc(100% - 32px));
+  display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;
+  padding: 10px 18px 12px; background: var(--card);
+  border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+}
+#replay-card .rp-tag { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the TV says it; kept for screen readers */
+#replay-title { font: 400 24px/1.1 var(--font-display); letter-spacing: .02em; }
+#replay-why { font-weight: 700; font-size: 15px; }
+#replay-how { font-size: 14px; color: var(--ink-soft); }
+#replay-skip { margin-top: 2px; font-size: 12px; color: var(--ink-soft); }
+#replay-skip:empty { display: none; }
 
 /* ---------- Cards / screens ---------- */
 .screen {
@@ -195,7 +214,29 @@ p { margin: 0; }
 .rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; border-top: 2.5px dashed var(--ink); padding-top: 16px; }
 .rules b { display: block; font: 400 19px/1.1 var(--font-display); letter-spacing: .02em; margin-bottom: 3px; }
 .rules span { font-size: 13.5px; color: var(--ink-soft); }
-.credit { margin-top: -10px; font-size: 11px; letter-spacing: .03em; color: var(--ink-soft); text-align: right; }
+.credit { margin-top: -12px; font-size: 9.5px; letter-spacing: .04em; color: var(--ink-soft); opacity: .75; text-align: right; }
+.version { margin-top: -12px; font-size: 9.5px; letter-spacing: .04em; color: var(--ink-soft); opacity: .55; text-align: right; }
+
+/* Aquigai is there to be discovered: in Normal mode its button is a little night sky that glows, shimmers and twinkles,
+   until this device has tried Aquigai once (data-aq-tried); then it stays a night sky but keeps still */
+#mode-seg button[data-v="aquigai"] { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 5px; }
+#mode-seg .spark { width: 11px; height: 11px; flex: none; fill: currentColor; }
+:root:not([data-mode="aquigai"]):not([data-aq-tried]) #mode-seg { animation: aq-glow 2.6s ease-in-out infinite; }
+:root:not([data-mode="aquigai"]) #mode-seg button[data-v="aquigai"] {
+  color: #fff3d1; text-shadow: 0 0 6px rgba(244, 185, 66, 0.9);
+  background: radial-gradient(90% 130% at 88% 0%, rgba(255, 210, 110, 0.6), transparent 60%), linear-gradient(135deg, #6a3fe0 0%, #9b4fd6 70%, #c45cc4 100%);
+}
+:root:not([data-mode="aquigai"]) #mode-seg button[data-v="aquigai"]:hover { filter: brightness(1.18); }
+:root:not([data-mode="aquigai"]) #mode-seg .spark { color: #f4b942; }
+:root:not([data-mode="aquigai"]):not([data-aq-tried]) #mode-seg .spark { animation: aq-twinkle 1.6s ease-in-out infinite; }
+:root:not([data-mode="aquigai"]):not([data-aq-tried]) #mode-seg button[data-v="aquigai"]::after {
+  content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 45%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 236, 170, 0.75), transparent);
+  animation: aq-shine 3.4s ease-in-out infinite;
+}
+@keyframes aq-glow { 0%, 100% { box-shadow: 6px 0 10px 0 rgba(176, 110, 255, 0.35); } 50% { box-shadow: 8px 0 20px 4px rgba(244, 185, 66, 0.75); } }
+@keyframes aq-shine { 0%, 55% { transform: translateX(-150%) skewX(-20deg); } 85%, 100% { transform: translateX(320%) skewX(-20deg); } }
+@keyframes aq-twinkle { 0%, 100% { transform: scale(0.7) rotate(0deg); opacity: 0.7; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
 
 .seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: var(--paper); flex: none; }
 .seg button { font-weight: 600; font-size: 13.5px; padding: 8px 11px; background: transparent; border: 0; border-left: 2px solid var(--ink); cursor: pointer; }
@@ -243,6 +284,23 @@ label.lbl { font-weight: 700; font-size: 13px; }
 .stack { display: flex; flex-direction: column; gap: 6px; }
 .code { font-family: var(--font-display); letter-spacing: .03em; color: var(--sky); -webkit-text-stroke: 0.04em var(--ink); paint-order: stroke fill; }
 #over-card { border-color: var(--ink); }
+.rate { display: flex; flex-direction: column; gap: 8px; border-top: 2.5px dashed var(--ink); padding-top: 14px; }
+/* after the first rating of a visit the stars stay folded behind a small link */
+.rate.folded { border-top: 0; padding-top: 0; }
+.rate.folded > :not(.rate-open), .rate:not(.folded) > .rate-open { display: none; }
+.rate-open { align-self: flex-end; padding: 4px 2px; border: 0; background: none; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.rate-q { font-weight: 800; font-size: 14px; }
+.stars { display: flex; gap: 4px; }
+.stars button { width: 40px; height: 40px; padding: 4px; border: 0; background: none; cursor: pointer; color: var(--grey); border-radius: 8px; }
+.stars button.on { color: var(--sun); }
+.stars button:focus-visible { outline: 3px solid var(--sky); outline-offset: 1px; }
+.stars svg { width: 100%; height: 100%; display: block; }
+.stars path { fill: currentColor; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+#rate-text { resize: vertical; min-height: 44px; font-size: 14px; }
+.rate-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rate-note { font-size: 12px; color: var(--ink-soft); }
+:root[data-mode="aquigai"] .rate { border-top: 1px solid var(--line); }
+:root[data-mode="aquigai"] .stars path { stroke: rgba(243, 241, 234, 0.5); }
 #over-title { color: var(--seat, var(--sun)); -webkit-text-stroke: 0.05em var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); font-size: clamp(36px, 9vw, 56px); }
 
 @media (max-width: 680px) {
@@ -259,6 +317,7 @@ label.lbl { font-weight: 700; font-size: 13px; }
   .seat-row .seg { justify-self: start; }
   .dress { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   #louie-preview { max-width: 220px; }
+  #replay-card { top: calc(112px + env(safe-area-inset-top, 0px)); }
 }
 @media (min-width: 1100px) {
   #scr-menu { padding-inline: 4vw 16px; background: linear-gradient(90deg, var(--scrim), transparent 55%); }
@@ -268,12 +327,67 @@ label.lbl { font-weight: 700; font-size: 13px; }
   #portrait { width: clamp(96px, 8vw, 128px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  #banner.pop { animation: none; }
+  #banner.pop, #mode-seg, #mode-seg .spark, #mode-seg button::after { animation: none !important; }
   .btn, .flock i { transition: none; }
 }
+
+/* ---------- Aquigai mode: the farm at night, in the colours of the Aquigai weekend
+   (dark sky with stars, warm gold and rose glows, hairline panels; the game's own fonts, as Paul asked) ---------- */
+.powered { display: none; }
+:root[data-mode="aquigai"] {
+  --table: #0b0d14; --table-deep: #06070c;
+  --card: #0f121a; --paper: #171b26;
+  --ink: #f3f1ea; --ink-soft: rgba(243, 241, 234, 0.68); --line: rgba(243, 241, 234, 0.16);
+  --sun: #f4b942; --sky: #8fc9e6; --red: #ff8064; --yellow: #f4b942; --green: #7fcfa0; --purple: #b89af0;
+  --grey: #5d6070; --scrim: rgba(6, 7, 12, 0.55);
+  color-scheme: dark;
+}
+:root[data-mode="aquigai"] body {
+  background:
+    radial-gradient(55% 45% at 88% 6%, rgba(244, 185, 66, 0.16), transparent 70%),
+    radial-gradient(50% 45% at 6% 96%, rgba(232, 147, 168, 0.13), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' fill='%23F3F1EA'%3E%3Ccircle cx='151.8' cy='201.8' r='1.0' fill-opacity='0.37'/%3E%3Ccircle cx='2.5' cy='358.7' r='0.8' fill-opacity='0.38'/%3E%3Ccircle cx='93.4' cy='124.6' r='0.8' fill-opacity='0.62'/%3E%3Ccircle cx='399.7' cy='252.9' r='0.6' fill-opacity='0.68'/%3E%3Ccircle cx='401.6' cy='106.5' r='0.7' fill-opacity='0.69'/%3E%3Ccircle cx='280.3' cy='11.5' r='1.0' fill-opacity='0.58'/%3E%3Ccircle cx='295.5' cy='413.9' r='0.8' fill-opacity='0.45'/%3E%3Ccircle cx='176.5' cy='36.1' r='1.0' fill-opacity='0.48'/%3E%3Ccircle cx='270.1' cy='398.3' r='0.8' fill-opacity='0.57'/%3E%3Ccircle cx='118.8' cy='35.1' r='0.6' fill-opacity='0.54'/%3E%3Ccircle cx='98.6' cy='64.9' r='0.8' fill-opacity='0.42'/%3E%3Ccircle cx='190.5' cy='69.0' r='1.0' fill-opacity='0.65'/%3E%3Ccircle cx='5.5' cy='353.8' r='1.0' fill-opacity='0.26'/%3E%3Ccircle cx='352.8' cy='293.6' r='0.6' fill-opacity='0.50'/%3E%3Ccircle cx='257.5' cy='209.7' r='0.6' fill-opacity='0.78'/%3E%3Ccircle cx='297.0' cy='386.2' r='0.8' fill-opacity='0.27'/%3E%3Ccircle cx='18.1' cy='273.1' r='1.2' fill-opacity='0.43'/%3E%3Ccircle cx='214.7' cy='400.2' r='0.6' fill-opacity='0.38'/%3E%3Ccircle cx='42.4' cy='39.1' r='0.6' fill-opacity='0.38'/%3E%3Ccircle cx='165.6' cy='19.6' r='0.6' fill-opacity='0.66'/%3E%3Ccircle cx='20.3' cy='355.6' r='1.0' fill-opacity='0.33'/%3E%3Ccircle cx='268.1' cy='107.3' r='0.7' fill-opacity='0.57'/%3E%3Ccircle cx='100.3' cy='102.7' r='0.6' fill-opacity='0.31'/%3E%3Ccircle cx='61.8' cy='163.1' r='0.6' fill-opacity='0.47'/%3E%3Ccircle cx='371.1' cy='195.9' r='0.8' fill-opacity='0.27'/%3E%3Ccircle cx='12.7' cy='83.2' r='0.8' fill-opacity='0.76'/%3E%3Ccircle cx='211.2' cy='43.4' r='0.7' fill-opacity='0.31'/%3E%3Ccircle cx='265.7' cy='119.2' r='1.0' fill-opacity='0.49'/%3E%3Ccircle cx='353.0' cy='99.8' r='0.7' fill-opacity='0.73'/%3E%3Ccircle cx='181.8' cy='94.4' r='0.7' fill-opacity='0.45'/%3E%3Ccircle cx='208.4' cy='73.1' r='1.0' fill-opacity='0.36'/%3E%3Ccircle cx='179.2' cy='9.2' r='0.8' fill-opacity='0.56'/%3E%3Ccircle cx='409.2' cy='356.0' r='0.8' fill-opacity='0.66'/%3E%3Ccircle cx='101.5' cy='270.6' r='0.7' fill-opacity='0.57'/%3E%3Ccircle cx='211.0' cy='205.9' r='0.6' fill-opacity='0.67'/%3E%3Ccircle cx='416.3' cy='45.1' r='0.8' fill-opacity='0.28'/%3E%3Ccircle cx='33.8' cy='208.5' r='0.6' fill-opacity='0.53'/%3E%3Ccircle cx='223.3' cy='41.9' r='0.8' fill-opacity='0.47'/%3E%3Ccircle cx='164.3' cy='93.6' r='1.0' fill-opacity='0.37'/%3E%3Ccircle cx='5.5' cy='0.1' r='0.8' fill-opacity='0.47'/%3E%3Ccircle cx='261.7' cy='23.3' r='0.6' fill-opacity='0.46'/%3E%3Ccircle cx='24.2' cy='279.8' r='1.2' fill-opacity='0.63'/%3E%3Ccircle cx='93.5' cy='211.5' r='1.2' fill-opacity='0.61'/%3E%3Ccircle cx='268.2' cy='311.8' r='0.8' fill-opacity='0.53'/%3E%3Ccircle cx='258.4' cy='335.3' r='1.2' fill-opacity='0.78'/%3E%3Ccircle cx='198.0' cy='202.1' r='0.7' fill-opacity='0.64'/%3E%3Ccircle cx='314.2' cy='380.7' r='0.6' fill-opacity='0.35'/%3E%3Ccircle cx='38.6' cy='157.0' r='0.8' fill-opacity='0.80'/%3E%3Ccircle cx='341.8' cy='400.4' r='0.7' fill-opacity='0.27'/%3E%3Ccircle cx='390.5' cy='289.3' r='0.6' fill-opacity='0.65'/%3E%3Ccircle cx='319.7' cy='144.7' r='1.2' fill-opacity='0.49'/%3E%3Ccircle cx='76.5' cy='37.7' r='0.6' fill-opacity='0.74'/%3E%3Ccircle cx='241.1' cy='64.1' r='0.7' fill-opacity='0.67'/%3E%3Ccircle cx='175.3' cy='316.2' r='0.6' fill-opacity='0.63'/%3E%3Ccircle cx='169.3' cy='108.8' r='1.2' fill-opacity='0.46'/%3E%3C/svg%3E") 0 0 / 420px 420px,
+    #06070c;
+}
+:root[data-mode="aquigai"] .card,
+:root[data-mode="aquigai"] .seat-card,
+:root[data-mode="aquigai"] #replay-card { border: 1px solid var(--line); background: rgba(15, 18, 26, 0.94); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); }
+:root[data-mode="aquigai"] .pill,
+:root[data-mode="aquigai"] .seg,
+:root[data-mode="aquigai"] .field,
+:root[data-mode="aquigai"] .list li,
+:root[data-mode="aquigai"] .chips button,
+:root[data-mode="aquigai"] .swatch,
+:root[data-mode="aquigai"] .dot,
+:root[data-mode="aquigai"] .key { border-width: 1px; border-color: var(--line); box-shadow: none; }
+:root[data-mode="aquigai"] .seg button { border-left-color: var(--line); }
+:root[data-mode="aquigai"] .rules { border-top: 1px solid var(--line); }
+:root[data-mode="aquigai"] .btn {
+  padding: 14px 24px 11px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--ink); color: #0a0b10; box-shadow: none;
+}
+:root[data-mode="aquigai"] .btn.alt { background: transparent; color: var(--ink); }
+:root[data-mode="aquigai"] .btn.go { background: var(--sun); color: #0a0b10; -webkit-text-stroke: 0; border-color: transparent; }
+:root[data-mode="aquigai"] .btn.small { padding: 10px 18px 8px; }
+:root[data-mode="aquigai"] .btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+:root[data-mode="aquigai"] .key { color: #0a0b10; -webkit-text-stroke: 0; }
+:root[data-mode="aquigai"] .logo { color: var(--ink); -webkit-text-stroke: 0; text-shadow: none; transform: none; }
+:root[data-mode="aquigai"] .logo span + span { color: var(--sun); }
+:root[data-mode="aquigai"] .code { color: var(--sun); -webkit-text-stroke: 0; }
+:root[data-mode="aquigai"] #over-title { -webkit-text-stroke: 0; text-shadow: none; }
+:root[data-mode="aquigai"] #banner { -webkit-text-stroke: 0; text-shadow: 0 0 42px rgba(244, 185, 66, 0.5); }
+:root[data-mode="aquigai"] #banner.minor { text-shadow: 0 0 30px rgba(244, 185, 66, 0.45); }
+:root[data-mode="aquigai"] .powered {
+  display: flex; align-items: center; gap: 10px; margin-top: -8px;
+  font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft);
+}
+.powered svg { width: 30px; height: 30px; flex: none; color: var(--ink); }
+.powered b { font: 400 18px/1 var(--font-display); letter-spacing: .01em; text-transform: none; color: var(--ink); }
+.mode-row .lbl { min-width: 0; }
 </style>
 
 <div id="stage">
+  <canvas id="scenery" aria-hidden="true"></canvas>
   <canvas id="board" role="img" aria-label="Looping Louie's farm: Louie's plane circles a tower and swoops over four barns of chickens"></canvas>
   <div id="hud" hidden>
     <div class="seat-card" id="card-0" data-pos="tl" style="--seat: var(--red)"><span class="key" id="card-key-0">Q</span><div class="who"><div class="name" id="card-name-0">Red</div><div class="sub" id="card-sub-0"></div></div><div class="flock" id="card-flock-0"><i></i><i></i><i></i></div></div>
@@ -289,16 +403,18 @@ label.lbl { font-weight: 700; font-size: 13px; }
   <div id="banner" aria-live="polite"></div>
   <div id="hint" hidden></div>
   <div id="toast" role="status" hidden></div>
+  <div id="replay-card" role="status" hidden><span class="rp-tag">Instant replay</span><b id="replay-title"></b><span id="replay-why"></span><span id="replay-how"></span><span id="replay-skip"></span></div>
 </div>
 
 <section class="screen" id="scr-menu">
   <div class="card">
     <p class="eyebrow">Farmyard flying game · 2 to 4 players</p>
     <div class="hero-top">
-      <h1 class="logo"><span>Looping</span><span>Louie</span></h1>
+      <div><h1 class="logo"><span>Looping</span><span>Louie</span></h1><p class="powered"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.1' aria-hidden='true'><circle cx='12' cy='7.2' r='5.6'/><circle cx='16.8' cy='12' r='5.6'/><circle cx='12' cy='16.8' r='5.6'/><circle cx='7.2' cy='12' r='5.6'/></svg><span>Powered by <b>Aquigai</b></span></p></div>
       <canvas id="portrait" role="img" title="Dress up Louie" aria-label="Louie the pilot, dressed the way he is set up in Dress up Louie"></canvas>
     </div>
     <p class="lede">Louie is flying circles over the farm, and whenever he swoops low he knocks a chicken off its perch. Flip your lever as he passes to send him looping away. The last farmer with a chicken left wins.</p>
+    <div class="row mode-row"><span class="lbl">Mode</span><div class="seg" id="mode-seg" role="group" aria-label="Game mode"><button type="button" data-v="normal">Normal</button><button type="button" data-v="aquigai"><svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z"/></svg>Aquigai</button></div></div>
     <div class="actions">
       <button class="btn" id="go-local" type="button">Play on this device</button>
       <button class="btn alt" id="go-online" type="button">Play online</button>
@@ -309,7 +425,7 @@ label.lbl { font-weight: 700; font-size: 13px; }
       <div><b>Short or long</b><span>Tap for a little hop. Hold a moment and he dives onto your neighbour's chickens; hold longer and he loops over them onto the next farmer. Hold too long and he goes all the way up.</span></div>
       <div><b>Chickens</b><span>Every farmer starts with three. Lose all three and you are out of the game. Louie flies faster every 40 seconds.</span></div>
     </div>
-    <p class="credit">by Paul</p>
+    <p class="credit">© by Paul</p>
   </div>
 </section>
 
@@ -395,6 +511,7 @@ label.lbl { font-weight: 700; font-size: 13px; }
       <button class="btn alt" id="cfg-reset" type="button">Reset look</button>
       <button class="btn go" id="cfg-done" type="button">Done</button>
     </div>
+    <p class="version" id="version"></p>
   </div>
 </section>
 
@@ -413,6 +530,13 @@ label.lbl { font-weight: 700; font-size: 13px; }
   <div class="card narrow" id="over-card">
     <h2 id="over-title">Red wins!</h2>
     <p class="lede" id="over-sub"></p>
+    <div class="rate" id="rate" hidden>
+      <button class="rate-open" id="rate-open" type="button">Rate this game</button>
+      <p class="rate-q" id="rate-q">How did you like it?</p>
+      <div class="stars" id="stars" role="radiogroup" aria-labelledby="rate-q"></div>
+      <textarea class="field" id="rate-text" maxlength="500" rows="2" placeholder="Ideas or improvements? (optional)" aria-label="Ideas or improvements (optional)"></textarea>
+      <div class="rate-row"><span class="rate-note" id="rate-note">Anonymous. We don't store your name; please leave personal details out of your comment.</span><button class="btn small alt" id="rate-send" type="button">Send</button></div>
+    </div>
     <div class="actions end" id="over-actions"></div>
   </div>
 </section>
@@ -448,6 +572,27 @@ const LATE = 0.14;             // radians past the lever where a late flick stil
 const TOO_HARD = 0.36;         // held this long when Louie arrives: all the way up
 const DROP = 0.12;             // time the lever takes to fall back down
 const ROLLBACK_STEPS = 180;    // 0.75 s: how late a remote hit may arrive
+const REPLAY_HOLD = 4.2;       // seconds the game stands still after a knock-out while everyone watches the instant replay
+const MU_FIRST = 5;            // Aquigai mode: the first magic mushroom flutters in 5 s into the game,
+const ITEM_LAPS = 1;           // and the next one once Louie has flown this many rounds after the last one's effect is over (Paul, 30 Oct)
+const MU_TRIP = 10;            // eating it makes Louie fly at half speed for 10 s
+const MU_SLOW = 0.5;
+const MU_H = 4.3, MU_BOB = 0.3;   // it flies this high (Louie units): a looping gets him there, a hop never does
+const MU_W = -0.15;            // and drifts slowly round the tower the other way
+const MU_HIT = 0.24;           // how close (board radii) Louie's plane must come to it
+const MUNCH_LEN = 3;           // seconds the game stands still for the close-up of Louie eating it,
+const MUNCH_AFTER = ROLLBACK_STEPS;   // which starts 0.75 s (in steps) after the bite, so everyone sees the hit first (online and on one device alike)
+const MU_GAP = 2.5;            // 2.5 s after the effect wears off he lets rip:
+const MU_BOOST = 3;            // a fart boost of 3 s
+const MU_FAST = 1.8;           // at up to 1.8x speed,
+const MU_KICKS = [[0.35, 5.5], [1.05, 3.6], [1.7, 6.2], [2.35, 4.4]];   // bouncing him up at these moments (s into the boost, upward speed), out of control
+const IT_MUSHROOM = 0, IT_HEART = 1, IT_HAT = 2, IT_LOTUS = 3;   // Aquigai's magic items, all flying like the mushroom (MU_H, MU_W, MU_HIT, ITEM_LAPS)
+const HEART_FLY = 0.8;         // the heart: one of the collector's lost chickens comes back when it lands, this long after
+const TP_AT = [1.2, 3.6, 6];   // the magic hat: Louie vanishes and pops up a quarter-turn on, at the first safe moment after each of these (s after the hat)
+const TP_SAFE = 0.3;           // a safe moment: just past a farmer's chickens (radians past their barn), so he lands just past the next farmer's
+const QUARTER = TAU / 4;
+const ZEN_BREATHS = 2;         // the lotus: the game stands still for two deep breaths of 5 s,
+const ZEN_LEN = ZEN_BREATHS * 5 + 1;   // with half a second either side
 const HIST_MAX = 200;
 const START_V = 4.5;
 const LOOP_V = 6.4;
@@ -470,8 +615,16 @@ function speedUps(gt) {
   if (n < 1) return 0;
   return Math.min(FASTER_MAX, n - 1 + Math.min(1, (gt - n * FASTER_EVERY) / FASTER_EASE));
 }
-function omega(gt, base) {
-  return base * (1 + FASTER_BY * speedUps(gt)) * (1 + 0.10 * Math.sin(0.83 * gt) + 0.05 * Math.sin(2.1 * gt + 1.3));
+function omega(gt, base, te) {
+  return base * (1 + FASTER_BY * speedUps(gt)) * (1 + 0.10 * Math.sin(0.83 * gt) + 0.05 * Math.sin(2.1 * gt + 1.3)) * mushSpeed(gt, te);
+}
+/* After a magic mushroom Louie flies at half speed until gt reaches te, easing in and out. MU_GAP later he lets rip:
+   a fart boost shoots him round at up to MU_FAST for MU_BOOST seconds. */
+function mushSpeed(gt, te) {
+  if (!(te > 0) || gt < te - MU_TRIP || gt > te + MU_GAP + MU_BOOST) return 1;
+  if (gt <= te) return 1 - (1 - MU_SLOW) * Math.min(1, (gt - (te - MU_TRIP)) / 0.6, (te - gt) / 1.0);
+  const b = gt - te - MU_GAP;              // seconds into the boost
+  return b <= 0 ? 1 : 1 + (MU_FAST - 1) * Math.min(1, b / 0.25, (MU_BOOST - b) / 0.8);
 }
 /* The lever flicks up the moment it is pressed and stays up while held (a tap
    still flicks it up for TAP_MIN). The longer it has been held when Louie
@@ -536,10 +689,10 @@ function airTime(e, ve, lvl) {
 }
 /* Seconds the motor takes to carry him a radians round the tower from time gt
    (counts the wobble and any speed-up during the flight). */
-function flightTime(a, gt, base) {
+function flightTime(a, gt, base, te) {
   const dt = 1 / 120;
   let done = 0, t = 0;
-  while (done < a && t < 6) { done += omega(gt + t + dt / 2, base) * dt; t += dt; }
+  while (done < a && t < 6) { done += omega(gt + t + dt / 2, base, te) * dt; t += dt; }
   return t;
 }
 /* Arm speed that keeps him above height lvl for T seconds. */
@@ -552,29 +705,70 @@ function solveVe(e, T, lvl) {
 const VE_OVER = 4.9;           // arm speed that always carries him over the top
 const DIVE_IN = 0.08;          // a dive onto the next farmer's chickens drops back within reach this far past their lever, so it can still be saved
 /* Arm speed for a hit: aimed so he comes down d seats on from the lever (into: how far past the lever he was hit). */
-function launch(lv, h, e, gt, base, into) {
+function launch(lv, h, e, gt, base, into, te) {
   const b = hitBand(lv, h);
   if (b.band === 3) return { ve: VE_OVER, band: 3 };
-  let ve = solveVe(e, flightTime(b.d * Math.PI / 2 - into, gt, base), LOW_H);
-  if (b.d > 1 && b.d < 1.35) ve = Math.min(ve, solveVe(e, flightTime(Math.PI / 2 + DIVE_IN - into, gt, base), REACH));
+  let ve = solveVe(e, flightTime(b.d * Math.PI / 2 - into, gt, base, te), LOW_H);
+  if (b.d > 1 && b.d < 1.35) ve = Math.min(ve, solveVe(e, flightTime(Math.PI / 2 + DIVE_IN - into, gt, base, te), REACH));
   return { ve, band: b.band };
 }
 function seatChicks(al, s) { return (al >> (s * 3)) & 7; }
 function bits3(x) { return (x & 1) + ((x >> 1) & 1) + ((x >> 2) & 1); }
 function fullMask(inGame) { let m = 0; for (let s = 0; s < 4; s++) if (inGame & (1 << s)) m |= 7 << (s * 3); return m; }
+/* lh: the seat that hit Louie last. Magic items (Aquigai mode): mn when the next one comes (-1: not known yet, or never), mu0 when the flying
+   one came (-1: none) and ms where, ik what it is (IT_*), io the game's order of items (2 bits each), mw by whose jump the
+   last one was collected. Per kind: mc mushrooms eaten, te when the mushroom's effect ends; hc hearts, hj which of mw's
+   chickens comes back (-1: none) and hr when (-1: done); tc magic hats, tt when the trick began (-1: never), tn teleports
+   done in it, tq when the last one was; zc lotus flowers (each stops the game for a meditation, see Match "zen"). */
+const MAGIC = ["lh", "mn", "mu0", "ms", "ik", "io", "mw", "mc", "te", "hc", "hj", "hr", "tc", "tt", "tn", "tq", "zc"];
+const MAGIC_TIMES = new Set(["mn", "mu0", "te", "hr", "tt", "tq"]);
 function newState(inGame, A) {
-  return { n: 0, gt: 0, A, e: E_REST, ve: 0, fl: 0, al: fullMask(inGame), hp: [-1e6, -1e6, -1e6, -1e6], kp: [-1e6, -1e6, -1e6, -1e6], hb: [0, 0, 0, 0], lp: [-9, -9, -9, -9], lr: [-9, -9, -9, -9] };
+  return { n: 0, gt: 0, A, e: E_REST, ve: 0, fl: 0, al: fullMask(inGame), hp: [-1e6, -1e6, -1e6, -1e6], kp: [-1e6, -1e6, -1e6, -1e6], hb: [0, 0, 0, 0], lp: [-9, -9, -9, -9], lr: [-9, -9, -9, -9],
+    lh: -1, mn: -1, mu0: -1, ms: 0, ik: 0, io: 0, mw: -1, mc: 0, te: -1, hc: 0, hj: -1, hr: -1, tc: 0, tt: -1, tn: 0, tq: -1, zc: 0 };
 }
 function cloneState(S) {
-  return { n: S.n, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, hp: S.hp.slice(), kp: S.kp.slice(), hb: S.hb.slice(), lp: S.lp.slice(), lr: S.lr.slice() };
+  const C = { n: S.n, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, hp: S.hp.slice(), kp: S.kp.slice(), hb: S.hb.slice(), lp: S.lp.slice(), lr: S.lr.slice() };
+  for (const k of MAGIC) C[k] = S[k];
+  return C;
+}
+/* When the next magic item comes: ITEM_LAPS rounds of the motor after the last one's effect is over at t. */
+function nextItem(t, base, te) {
+  for (let i = 0; i < ITEM_LAPS; i++) t += flightTime(TAU, t, base, te);
+  return t;
+}
+/* Louie touches a magic item: whoever sent him up there gets the credit, and the next item comes a round after this
+   one's effect is over (the hat's once the trick is done: see stepSim). */
+function collect(S, base) {
+  const w = S.lh;
+  S.mu0 = -1; S.mw = w; S.mn = -1;
+  if (S.ik === IT_MUSHROOM) {                // the effect starts with the close-up and ends with the fart boost
+    S.mc++; S.te = S.gt + MUNCH_AFTER * DT + MU_TRIP; S.mn = nextItem(S.te + MU_GAP + MU_BOOST, base, S.te);
+  } else if (S.ik === IT_HEART) {            // done when it lands
+    S.hc++; S.hj = -1; S.hr = S.gt + HEART_FLY; S.mn = nextItem(S.hr, base, S.te);
+    if (w >= 0) for (let j = 0; j < 3; j++) if (!(S.al & (1 << (w * 3 + j)))) { S.hj = j; break; }
+  } else if (S.ik === IT_HAT) { S.tc++; S.tt = S.gt; S.tn = 0; S.tq = -1; }
+  else { S.zc++; S.mn = nextItem(S.gt + MUNCH_AFTER * DT, base, S.te); }   // the game stands still from MUNCH_AFTER on, so done there
+  S.ik = (S.io >> (2 * ((S.mc + S.hc + S.tc + S.zc) % 4))) & 3;
+}
+/* Where the flying mushroom is: drifting round the tower and bobbing, always where Louie's arm can reach. */
+function muPos(S) {
+  const t = S.gt - S.mu0, h = MU_H + MU_BOB * Math.sin(0.9 * t), z = h * ARM_ZU - ARM_ZP;
+  return { A: S.ms + MU_W * t, h, r: Math.sqrt(Math.max(0, ARM_L * ARM_L - z * z)) };
 }
 function gauss(rng) { return Math.sqrt(-2 * Math.log(1 - rng() * 0.999999)) * Math.cos(TAU * rng()); }
 
 /* One physics step. cfg.remote[s] seats never collide locally; they only
    hit through a claim {k: pass number, v: launch speed} sent by that player. */
 function stepSim(S, cfg, fx) {
+  if (S.tt >= 0 && S.tn < TP_AT.length && S.gt >= S.tt + TP_AT[S.tn]) {   // the magic hat's trick: he vanishes and pops up a quarter-turn on
+    const x = (((S.A - SEAT_ANGLES[0]) % QUARTER) + QUARTER) % QUARTER;
+    if (x >= TP_SAFE && x < TP_SAFE + 0.12) {
+      S.A += QUARTER; S.tn++; S.tq = S.gt;
+      if (S.tn === TP_AT.length) S.mn = nextItem(S.tq + 1, cfg.base, S.te);   // the last jump: the hat comes off 1 s later, then a round
+    }
+  }
   const A0 = S.A;
-  let A1 = A0 + omega(S.gt, cfg.base) * DT;
+  let A1 = A0 + omega(S.gt, cfg.base, S.te) * DT;
   let e = S.e, ve = S.ve, over = false;
   if (e > E_REST || ve > 0) {
     ve -= K_GRAV * Math.cos(e) * DT; e += ve * DT;
@@ -584,8 +778,25 @@ function stepSim(S, cfg, fx) {
     }
   }
   S.A = A1; S.e = e; S.ve = ve; S.gt += DT; S.n++;
+  if (S.mn >= 0 && S.mu0 < 0 && S.gt >= S.mn) { S.mu0 = S.gt; S.ms = A1 + Math.PI; }   // a magic item flutters in, across the tower from Louie
+  if (S.hr >= 0 && S.gt >= S.hr) {         // the heart lands: the chicken comes back (never to a farmer who is out by now)
+    if (S.hj >= 0 && S.mw >= 0 && seatChicks(S.al, S.mw)) S.al |= 1 << (S.mw * 3 + S.hj);
+    S.hr = -1;
+  }
   if (over) { S.fl++; return; }            // up above the tower nothing on the board can touch him
   const h = hOf(e);
+  if (S.mu0 >= 0 && h > 2) {               // his plane touches the item: he gets it
+    const m = muPos(S), r1 = rhoOf(e), dz = (h - m.h) * ARM_ZU;
+    const dx = r1 * Math.cos(A1) - m.r * Math.cos(m.A), dy = r1 * Math.sin(A1) - m.r * Math.sin(m.A);
+    if (dx * dx + dy * dy + dz * dz < MU_HIT * MU_HIT) {
+      collect(S, cfg.base);
+      if (fx && fx.eat) fx.eat(S.mw);
+    }
+  }
+  if (S.te > 0 && h < 1.5) for (const [at, v] of MU_KICKS) {   // the fart boost bounces him about
+    const tk = S.te + MU_GAP + at;
+    if (S.gt - DT < tk && S.gt >= tk) S.ve = Math.max(S.ve, veFor(v, S.e));
+  }
   for (let s = 0; s < 4; s++) {
     if (!(cfg.inGame & (1 << s)) || !seatChicks(S.al, s)) continue;
     const a = SEAT_ANGLES[s];
@@ -596,15 +807,15 @@ function stepSim(S, cfg, fx) {
       if (cfg.remote[s]) {
         const c = cfg.claims[s];
         if (c && c.k === k && into >= c.a - 1e-6 && h < REACH + 0.25) {
-          S.ve = Math.max(S.ve, c.v); S.hp[s] = k; S.kp[s] = k; S.hb[s] = c.b;
+          S.ve = Math.max(S.ve, c.v); S.hp[s] = k; S.kp[s] = k; S.hb[s] = c.b; S.lh = s;
           if (fx) fx.hit(s, c.v, k, c.b, into);
         }
       } else {
         const lv = lever(S.gt, S.lp[s], S.lr[s]);
         const need = 0.25 + Math.max(0, -vhOf(S.e, S.ve) - 6) * 0.06;   // a fast dive is a little harder to catch
         if (lv.lift >= need && h < REACH) {
-          const L = launch(lv, h, S.e, S.gt, cfg.base, into);
-          S.ve = Math.max(S.ve, L.ve); S.hp[s] = k; S.kp[s] = k; S.hb[s] = L.band;   // a hit also saves this pass's chickens
+          const L = launch(lv, h, S.e, S.gt, cfg.base, into, S.te);
+          S.ve = Math.max(S.ve, L.ve); S.hp[s] = k; S.kp[s] = k; S.hb[s] = L.band; S.lh = s;   // a hit also saves this pass's chickens
           if (fx) fx.hit(s, L.ve, k, L.band, into);
         }
       }
@@ -635,6 +846,13 @@ class Match {
     const order = [0, 1, 2, 3].filter((s) => inGame & (1 << s));
     const s0 = order.length ? order[Math.floor(this.rng() * order.length)] : 0;
     this.S = newState(inGame, SEAT_ANGLES[s0] + 0.45);
+    if (opt.mushrooms) {                       // Aquigai mode: magic items, in a shuffled order (or opt.items, for tests)
+      const items = Array.isArray(opt.items) ? opt.items : [0, 1, 2, 3];
+      if (!Array.isArray(opt.items)) for (let i = 3; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; }
+      this.S.io = items.reduce((a, k, i) => a | ((k & 3) << (2 * i)), 0);
+      this.S.ik = items[0] & 3;
+      this.S.mn = MU_FIRST;
+    }
     this.hist = [cloneState(this.S)];
     this.pressLog = [];
     this.commitSteps = this.cfg.remote.some(Boolean) ? ROLLBACK_STEPS : 0;
@@ -642,6 +860,12 @@ class Match {
     this.cd = opt.countdown == null ? 3 : opt.countdown;
     this.status = this.cd > 0 ? "countdown" : "play";
     if (this.status === "play") this.S.ve = veFor(START_V, E_REST);
+    this.replays = !!opt.replays;     // stand still for an instant replay when a farmer is knocked out
+    this.rp = 0;
+    this.mk = 0;                      // seconds left of the close-up of Louie eating a magic mushroom
+    this.eaten = 0;                   // mushrooms eaten so far, counted once they are past the rollback window
+    this.zk = 0;                      // seconds left of a meditation (the lotus)
+    this.zenned = 0;                  // lotus flowers collected so far, counted the same way
     this.acc = 0;
     this.winner = -1;
     this.ack = [0, 0, 0, 0];
@@ -655,6 +879,21 @@ class Match {
     if (this.status === "countdown") {
       this.cd -= dt;
       if (this.cd <= 0) { this.cd = 0; this.status = "play"; this.S.ve = veFor(START_V, E_REST); }
+      return;
+    }
+    if (this.status === "replay") {          // frozen: no steps, no clock; then play on from the same moment
+      this.rp -= dt;
+      if (this.rp <= 0) { this.rp = 0; this.status = "play"; this.acc = 0; }
+      return;
+    }
+    if (this.status === "munch") {           // frozen the same way for the close-up of Louie eating a magic mushroom
+      this.mk -= dt;
+      if (this.mk <= 0) { this.mk = 0; this.status = "play"; this.acc = 0; }
+      return;
+    }
+    if (this.status === "zen") {             // and for a meditation
+      this.zk -= dt;
+      if (this.zk <= 0) { this.zk = 0; this.status = "play"; this.acc = 0; }
       return;
     }
     if (this.status !== "play") return;
@@ -711,7 +950,7 @@ class Match {
       const P = SEAT_ANGLES[s] + PAD_OFF;
       const k = Math.floor((S.A - P) / TAU) + 1;
       if (ai.planned === k) continue;
-      const w = omega(S.gt, this.cfg.base);
+      const w = omega(S.gt, this.cfg.base, S.te);
       const tArr = (P + TAU * k - S.A) / w;
       if (tArr > 0.6) continue;
       // diving onto the chickens he can still be caught past the lever, once he drops within reach
@@ -738,20 +977,26 @@ class Match {
       else { ai.pressAt = arrive - HOLD_FOR[want] + err; ai.releaseAt = arrive + 0.06 + Math.abs(err); }
     }
   }
-  /* Chickens only fall for good once a knock is older than the rollback window. */
+  /* Chickens only fall for good once a knock is older than the rollback window. A bitten mushroom stops the game
+     for the close-up a moment later (and never before the rollback window is past); so does a lotus, for a meditation. */
   commit() {
     const idx = this.hist.length - 1 - this.commitSteps;
+    const Hm = this.hist[Math.max(0, this.hist.length - 1 - Math.max(this.commitSteps, MUNCH_AFTER))];
+    if (Hm.mc > this.eaten) { this.eaten = Hm.mc; this.status = "munch"; this.mk = MUNCH_LEN; return; }
+    if (Hm.zc > this.zenned) { this.zenned = Hm.zc; this.status = "zen"; this.zk = ZEN_LEN; return; }
     const cm = this.hist[Math.max(0, idx)].al;
     if (cm === this.committed) return;
+    const was = this.committed;
     this.committed = cm;
     const alive = [0, 1, 2, 3].filter((s) => (this.inGame & (1 << s)) && seatChicks(cm, s));
     if (alive.length <= 1) { this.status = "over"; this.winner = alive.length ? alive[0] : -1; }
+    else if (this.replays && [0, 1, 2, 3].some((s) => seatChicks(was, s) && !seatChicks(cm, s))) { this.status = "replay"; this.rp = REPLAY_HOLD; }
   }
   /* A remote player says "my lever hit Louie on pass k at speed v". */
   claim(s, seq, k, v, b, a) {
     if (!this.cfg.remote[s] || !(seq > this.ack[s])) return false;
     this.ack[s] = seq;
-    if (this.status !== "play" || !Number.isInteger(k) || !Number.isFinite(v)) return false;
+    if (!["play", "replay", "munch", "zen"].includes(this.status) || !Number.isInteger(k) || !Number.isFinite(v)) return false;
     b = Number.isInteger(b) && b >= 0 && b <= 3 ? b : 0;
     v = b === 3 ? VE_OVER : Math.min(4.6, Math.max(0.2, v));
     a = Number.isFinite(a) ? Math.min(LATE - 1e-4, Math.max(0, a)) : 0;
@@ -782,13 +1027,15 @@ class Match {
   }
   snapshot(round) {
     const S = this.S, r4 = (x) => Math.round(x * 1e4) / 1e4;
-    return {
+    const o = {
       r: round, st: this.status, cd: r4(this.cd), t: r4(S.gt), A: Math.round(S.A * 1e6) / 1e6,
       e: Math.round(S.e * 1e6) / 1e6, ve: Math.round(S.ve * 1e6) / 1e6, fl: S.fl, al: S.al, cm: this.committed, hp: S.hp.slice(), kp: S.kp.slice(),
       lv: [0, 1, 2, 3].map((s) => Math.round(this.leverOf(s).lift * 100)),
       hd: [0, 1, 2, 3].map((s) => { const l = this.leverOf(s); return l.held ? Math.round(l.hold * 1000) : 0; }),
-      ack: this.ack.slice(), hb: S.hb.slice(), w: this.winner, b: this.speed, g: this.inGame,
+      ack: this.ack.slice(), hb: S.hb.slice(), w: this.winner, b: this.speed, g: this.inGame, mk: r4(this.mk), zk: r4(this.zk),
     };
+    for (const k of MAGIC) o[k] = k === "ms" ? Math.round(S.ms * 1e6) / 1e6 : MAGIC_TIMES.has(k) ? r4(S[k]) : S[k];
+    return o;
   }
 }
 
@@ -853,8 +1100,9 @@ class Mirror {
     if (this.pending && now - this.pending.t0 > 1.2) this.pending = null;
     const tau = this.hostTime(now);
     if (this.anchor && tau > this.anchor.until) this.anchor = null;
-    const base = this.pending ? this.pending.base : this.anchor ? this.anchor.base : snap;
+    const base = snap.st !== "play" ? snap : this.pending ? this.pending.base : this.anchor ? this.anchor.base : snap;   // standing still: show the host's frozen state
     const R = { n: 0, gt: base.t, A: base.A, e: base.e, ve: base.ve, fl: base.fl, al: base.al, hp: base.hp.slice(), kp: base.kp.slice(), hb: base.hb.slice(), lp: [-9, -9, -9, -9], lr: [-9, -9, -9, -9] };
+    for (const k of MAGIC) R[k] = base[k];
     if (snap.st !== "play" || base.st !== "play") return R;
     const me = this.mySeat;
     const steps = Math.min(360, Math.max(0, Math.floor((tau - base.t) / DT)));
@@ -911,6 +1159,8 @@ const settings = {
   nick: "",
   sound: true,
   louie: { hat: "beanie", hair: "wavy", beard: 3, glasses: "lime" },
+  mode: "normal",
+  aqTried: false,        // this device has played Aquigai: its button stops glowing
 };
 function mergeSettings(o) {
   if (!o || typeof o !== "object") return;
@@ -925,8 +1175,15 @@ function mergeSettings(o) {
   if (typeof o.nick === "string") settings.nick = cleanName(o.nick, "");
   if (typeof o.sound === "boolean") settings.sound = o.sound;
   if (o.louie) settings.louie = cleanLook(o.louie);
+  if (PALETTES[o.mode]) settings.mode = o.mode;
+  if (o.aqTried === true) settings.aqTried = true;
 }
-function loadSettings() { try { const raw = localStorage.getItem(STORE_KEY); if (raw) mergeSettings(JSON.parse(raw)); } catch (e) { /* storage unavailable */ } }
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") delete o.mode; mergeSettings(o); }   // every visit opens in Normal: Aquigai is there to be discovered
+  } catch (e) { /* storage unavailable */ }
+}
 function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* storage unavailable */ } }
 
 /* ======================================================================
@@ -934,6 +1191,7 @@ function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(s
    ====================================================================== */
 const Sound = {
   ac: null, out: null, on: true, motor: null, motorGain: null, noiseBuf: null,
+  rate: 1,                   // below 1 everything plays slower and deeper, like a slowed-down tape (the magic mushroom)
   ensure() {
     if (this.ac) { if (this.ac.state === "suspended") this.ac.resume().catch(() => {}); return true; }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -957,11 +1215,13 @@ const Sound = {
     if (!this.ac) return;
     const t = this.ac.currentTime;
     this.motorGain.gain.setTargetAtTime(level, t, 0.12);
-    this.motor.frequency.setTargetAtTime(36 + w * 9, t, 0.12);
+    this.motor.frequency.setTargetAtTime((36 + w * 9) * this.rate, t, 0.12);
   },
   tone(type, f0, f1, dur, vol, delay) {
     if (!this.ac) return;
-    const t = this.ac.currentTime + (delay || 0);
+    const r = this.rate;
+    f0 *= r; f1 *= r; dur /= r;
+    const t = this.ac.currentTime + (delay || 0) / r;
     const o = this.ac.createOscillator(); o.type = type;
     o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
     const g = this.ac.createGain();
@@ -969,9 +1229,11 @@ const Sound = {
     o.connect(g); g.connect(this.out); o.start(t); o.stop(t + dur + 0.05);
     return o;
   },
-  noise(dur, freq, vol) {
+  noise(dur, freq, vol, delay) {
     if (!this.ac) return;
-    const t = this.ac.currentTime;
+    const r = this.rate;
+    dur /= r; freq *= r;
+    const t = this.ac.currentTime + (delay || 0) / r;
     const src = this.ac.createBufferSource(); src.buffer = this.noiseBuf;
     const f = this.ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 1.2;
     const g = this.ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -983,15 +1245,15 @@ const Sound = {
     if (!this.ac) return;
     this.tone("square", 560, 420, 0.06, 0.09);
     this.tone("square", 610, 440, 0.06, 0.09, 0.09);
-    const t = this.ac.currentTime + 0.2;
+    const r = this.rate, t = this.ac.currentTime + 0.2 / r;
     const o = this.ac.createOscillator(); o.type = "sawtooth";
-    o.frequency.setValueAtTime(700, t); o.frequency.linearRampToValueAtTime(980, t + 0.1); o.frequency.linearRampToValueAtTime(560, t + 0.32);
-    const lfo = this.ac.createOscillator(); lfo.frequency.value = 28;
-    const lg = this.ac.createGain(); lg.gain.value = 70; lfo.connect(lg); lg.connect(o.frequency);
+    o.frequency.setValueAtTime(700 * r, t); o.frequency.linearRampToValueAtTime(980 * r, t + 0.1 / r); o.frequency.linearRampToValueAtTime(560 * r, t + 0.32 / r);
+    const lfo = this.ac.createOscillator(); lfo.frequency.value = 28 * r;
+    const lg = this.ac.createGain(); lg.gain.value = 70 * r; lfo.connect(lg); lg.connect(o.frequency);
     const f = this.ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 2600;
-    const g = this.ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    const g = this.ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.02 / r); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34 / r);
     o.connect(f); f.connect(g); g.connect(this.out);
-    o.start(t); lfo.start(t); o.stop(t + 0.38); lfo.stop(t + 0.38);
+    o.start(t); lfo.start(t); o.stop(t + 0.38 / r); lfo.stop(t + 0.38 / r);
   },
   knockedOut() { [523, 392, 262].forEach((f, i) => this.tone("triangle", f, f * 0.96, 0.2, 0.25, i * 0.17)); },
   win() { [523, 659, 784, 1047].forEach((f, i) => this.tone("square", f, f, 0.15, 0.1, i * 0.12)); this.tone("square", 1047, 1050, 0.55, 0.1, 0.48); },
@@ -999,6 +1261,53 @@ const Sound = {
   tick() { this.tone("sine", 660, 660, 0.12, 0.22); },
   go() { this.tone("sine", 990, 1000, 0.3, 0.26); },
   faster() { [0, 0.13].forEach((d) => this.tone("square", 330, 880, 0.12, 0.08, d)); },
+  // the magic mushroom: a glassy sparkle when it flutters in, a gulp when Louie bites into it, then in the
+  // close-up three nom-noms and a slow, wobbly "whoa" (two tones a little apart, so they beat)
+  sparkle() { [1319, 1760, 2093, 2637].forEach((f, i) => this.tone("sine", f, f * 1.01, 0.35, 0.07, i * 0.07)); },
+  gulp() { this.tone("sine", 300, 900, 0.18, 0.25); [1568, 2093, 2637].forEach((f, i) => this.tone("triangle", f, f, 0.25, 0.06, 0.08 + i * 0.06)); },
+  munch() {
+    [0.95, 1.22, 1.49].forEach((d) => { this.tone("square", 220, 150, 0.11, 0.06, d); this.noise(0.07, 800, 0.1, d); });
+    this.tone("sine", 640, 160, 1.1, 0.14, 1.95); this.tone("sine", 652, 166, 1.1, 0.12, 1.95);
+  },
+  // the fart boost: a long, wobbly, very rude low note with a breathy rasp, then a whoosh as he shoots off
+  fart() {
+    if (!this.ac) return;
+    const ac = this.ac, t = ac.currentTime, dur = 1.15;
+    const o = ac.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(115, t); o.frequency.exponentialRampToValueAtTime(48, t + dur);
+    const lfo = ac.createOscillator(); lfo.type = "square";
+    lfo.frequency.setValueAtTime(34, t); lfo.frequency.linearRampToValueAtTime(15, t + dur);
+    const lg = ac.createGain(); lg.gain.value = 32; lfo.connect(lg); lg.connect(o.frequency);
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 560; f.Q.value = 4;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.42, t + 0.04); g.gain.setValueAtTime(0.42, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(this.out);
+    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+    this.noise(0.2, 240, 0.3); this.noise(0.2, 320, 0.2, 0.35); this.noise(0.2, 200, 0.18, 0.7);
+    this.tone("sine", 220, 1100, 0.6, 0.12, 0.85); this.noise(0.2, 1400, 0.12, 0.9);
+  },
+  // the heart: a smacking "mwah", then a cluck and a chime when the chicken is back on its perch
+  kiss() { this.noise(0.04, 2400, 0.25); this.tone("sine", 520, 1250, 0.13, 0.2, 0.03); this.tone("sine", 1250, 820, 0.22, 0.12, 0.15); },
+  chickBack() { this.tone("square", 560, 700, 0.06, 0.06); this.tone("square", 610, 760, 0.06, 0.06, 0.08); [1047, 1319, 1568].forEach((f, i) => this.tone("triangle", f, f, 0.3, 0.08, 0.16 + i * 0.07)); },
+  // the magic hat: a harp run when it is collected, a soft "poof" at each teleport and a fanfare for the last one
+  magic() { [523, 659, 784, 988, 1175, 1568, 2093].forEach((f, i) => this.tone("triangle", f, f * 1.01, 0.35, 0.07, i * 0.05)); },
+  poof() { this.noise(0.3, 420, 0.4); this.tone("sine", 900, 260, 0.18, 0.08); this.tone("sine", 1568, 2093, 0.2, 0.05, 0.12); },
+  tada() { [[523, 659, 784], [659, 784, 1047]].forEach((ch, k) => ch.forEach((f) => this.tone("triangle", f, f, k ? 0.6 : 0.16, 0.07, 0.15 + k * 0.18))); },
+  // the lotus: a little chime when it is collected, a singing bowl as the meditation begins, and a soft swell for
+  // each breath, rising as everyone breathes in (2 s) and falling as they breathe out (3 s)
+  chime() { [1568, 2349, 3136].forEach((f, i) => this.tone("sine", f, f, 1.2, 0.06, i * 0.09)); },
+  bowl() { for (const [f, v] of [[264, 0.12], [396, 0.06], [528, 0.05], [711, 0.03]]) { this.tone("sine", f, f * 0.998, 5, v); this.tone("sine", f * 1.004, f, 5, v * 0.6); } },
+  breath(inhale) {
+    if (!this.ac) return;
+    const ac = this.ac, r = this.rate, t = ac.currentTime, dur = (inhale ? 2 : 3) / r;
+    const src = ac.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.8;
+    f.frequency.setValueAtTime((inhale ? 500 : 1100) * r, t); f.frequency.linearRampToValueAtTime((inhale ? 1100 : 450) * r, t + dur);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.11, t + dur * (inhale ? 0.7 : 0.25)); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.out); src.start(t); src.stop(t + dur + 0.05);
+    this.tone("sine", inhale ? 330 : 396, inhale ? 396 : 297, dur, 0.035);
+  },
 };
 
 /* ======================================================================
@@ -1009,6 +1318,7 @@ const canvas = $("board");
 const ctx = canvas.getContext("2d");
 const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const FONT_D = '"Luckiest Guy", Impact, "Arial Black", sans-serif';
+const FONT_B = '"Rubik", system-ui, sans-serif';
 const COL = {
   ink: "#241a2e", edge: "#2f6726", grassA: "#8fd86f", grassB: "#4c9f3a", dirt: "#d6a867", dirtDark: "#a3763f",
   tower: "#ffc53a", towerDark: "#d18b0c", cap: "#3d9be0", red: "#e5412f", steel: "#a3acbd", white: "#ffffff",
@@ -1022,6 +1332,833 @@ const SEAT_COL = [
   { c: "#8a55d4", d: "#5a2f99" },
 ];
 const GREY_SEAT = { c: COL.grey, d: COL.greyDark };
+/* Game modes: Normal is the game as it was; Aquigai repaints the farm at night. */
+const PALETTES = {
+  normal: { col: Object.assign({}, COL), seats: SEAT_COL.map((x) => Object.assign({}, x)) },
+  aquigai: {
+    col: Object.assign({}, COL, {
+      ink: "#0e1018", edge: "#16302a", grassA: "#2e5a48", grassB: "#122820", dirt: "#7f6c54", dirtDark: "#4f4232",
+      tower: "#f4b942", towerDark: "#b07f22", cap: "#e893a8", red: "#ff8064", steel: "#8d93a6", white: "#f3f1ea",
+      roof: "#2b2433", grey: "#5d6070", greyDark: "#3c3e4a",
+    }),
+    seats: [{ c: "#ff8064", d: "#c4553f" }, { c: "#f4b942", d: "#b07f22" }, { c: "#7fcfa0", d: "#4f9a70" }, { c: "#b89af0", d: "#7d63bd" }],
+  },
+};
+function applyMode(m) {
+  const p = PALETTES[m] || PALETTES.normal;
+  Object.assign(COL, p.col);
+  p.seats.forEach((x, i) => Object.assign(SEAT_COL[i], x));
+  GREY_SEAT.c = COL.grey; GREY_SEAT.d = COL.greyDark;
+  document.documentElement.dataset.mode = m;
+  if (m === "aquigai" && !settings.aqTried) { settings.aqTried = true; saveSettings(); }   // picked it, or joined a table playing it
+  document.documentElement.toggleAttribute("data-aq-tried", settings.aqTried);
+  if (W) layout();
+}
+/* Aquigai backdrop: Landhaus Sieben Wasser at night, on the horizon just behind the board's far rim.
+   It has its own canvas under the board and is redrawn only on layout, so it costs nothing per frame. */
+const scenery = $("scenery"), sctx = scenery.getContext("2d");
+const SCENE_A = 0.78;   // matches #scenery's CSS opacity, for the lights drawn per frame on the board canvas
+const scene = { bulbs: [], salon: null, moment: null, sprite: null };
+function seeded(n) {
+  return () => { n = (n + 0x6d2b79f5) | 0; let t = Math.imul(n ^ (n >>> 15), 1 | n); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function drawScenery() {
+  scenery.width = canvas.width; scenery.height = canvas.height;   // also clears it
+  scene.bulbs = []; scene.salon = null;
+  if (document.documentElement.dataset.mode !== "aquigai" || !W) return;
+  if (!scene.sprite) {
+    const sp = scene.sprite = document.createElement("canvas"), k = sp.getContext("2d");
+    sp.width = sp.height = 48;
+    const bg = k.createRadialGradient(24, 24, 0, 24, 24, 24);
+    bg.addColorStop(0, "rgba(255,248,225,1)"); bg.addColorStop(0.2, "rgba(255,224,160,1)"); bg.addColorStop(0.38, "rgba(255,206,110,0.42)"); bg.addColorStop(1, "rgba(255,206,110,0)");
+    k.fillStyle = bg; k.fillRect(0, 0, 48, 48);
+  }
+  const c = sctx, rnd = seeded(7);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const u = (W < 680 ? 0.6 : 0.45) * R;                   // the house's scale: small, so it reads as far away
+  const gy = cy - 0.93 * R;                                // the horizon, just above the far barns' roofs
+  const hx = cx - 0.75 * R;                                // the main gable's centre, left of the tower
+  const lakeX = cx + 0.15 * R;                             // open water from here to the right
+  const poly = (pts) => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); };
+  const blob = (x, y, rx, ry) => { c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU); c.fill(); };
+
+  // afterglow on the horizon: rose over the woods, gold over the lake
+  let g = c.createLinearGradient(0, 0, W, 0);
+  g.addColorStop(0, "rgba(232,147,168,0.09)"); g.addColorStop(0.5, "rgba(232,147,168,0.05)"); g.addColorStop(1, "rgba(244,185,66,0.16)");
+  c.fillStyle = g; c.fillRect(0, gy - 1.7 * u, W, 1.7 * u + 2);
+  g = c.createLinearGradient(0, gy - 1.7 * u, 0, gy);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,1)");
+  c.globalCompositeOperation = "destination-in"; c.fillStyle = g; c.fillRect(0, gy - 1.7 * u, W, 1.7 * u + 2);
+  c.globalCompositeOperation = "source-over";
+
+  // the lawn at night, fading towards the bottom so the rose glow still shows through
+  g = c.createLinearGradient(0, gy, 0, H);
+  g.addColorStop(0, "#0d1714"); g.addColorStop(0.45, "rgba(8,12,12,0.9)"); g.addColorStop(1, "rgba(6,7,12,0.55)");
+  c.fillStyle = g; c.fillRect(0, gy, W, H - gy);
+
+  // the lake, with the afterglow's gold glinting on it
+  g = c.createLinearGradient(0, gy, 0, gy + 0.22 * u);
+  g.addColorStop(0, "#22232c"); g.addColorStop(1, "#0d1714");
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(lakeX - 0.5 * u, gy + 0.22 * u); c.quadraticCurveTo(lakeX - 0.1 * u, gy, lakeX + 0.4 * u, gy);
+  c.lineTo(W + 2, gy); c.lineTo(W + 2, gy + 0.22 * u); c.closePath(); c.fill();
+  c.strokeStyle = "#f4b942"; c.lineWidth = 1;
+  for (let i = 0; i < 40; i++) {
+    const y = gy + (0.015 + rnd() * 0.17) * u, x = lakeX + rnd() * (W - lakeX), l = (0.03 + rnd() * 0.12) * u;
+    c.globalAlpha = 0.15 + 0.45 * rnd() * (1 - (y - gy) / (0.2 * u));
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + l, y); c.stroke();
+  }
+  c.globalAlpha = 1;
+
+  // pines: a tall wood on the left, a low far shore across the lake
+  function pine(x, base, h, w) {
+    const side = [];
+    for (let i = 1; i <= 4; i++) { const y = base - h + 0.9 * h * i / 4, ww = w * (0.3 + 0.7 * i / 4); side.push([ww / 2, y], [ww * 0.16, y + h * 0.015]); }
+    side.pop();
+    const pts = [[x, base - h]];
+    side.forEach(([dx, y]) => pts.push([x + dx, y]));
+    pts.push([x + w * 0.05, base], [x - w * 0.05, base]);
+    for (let i = side.length - 1; i >= 0; i--) pts.push([x - side[i][0], side[i][1]]);
+    poly(pts); c.fill();
+  }
+  c.fillStyle = "#0a1210";
+  for (let x = lakeX + 0.35 * u; x < W + 0.2 * u; x += (0.05 + rnd() * 0.07) * u) { const h = (0.14 + rnd() * 0.18) * u; pine(x, gy + 1, h, h * 0.5); }
+  c.fillStyle = "#0e1714";
+  for (let x = -0.1 * u; x < lakeX + 0.3 * u; x += (0.08 + rnd() * 0.12) * u) {
+    const h = (0.8 + rnd() * 0.55) * u * (x > lakeX - 0.3 * u ? 0.6 : 1);
+    pine(x, gy + 2, h, h * (0.3 + rnd() * 0.1));
+  }
+
+  // the house
+  const wall = "#232a37", roof = "#52302b", roofDark = "#3e2622", frame = "rgba(243,241,234,0.42)";
+  function win(x, y, w, h, on, cross) {
+    if (on) { c.save(); c.shadowColor = "rgba(244,185,66,0.85)"; c.shadowBlur = 0.1 * u * DPR; c.fillStyle = "#f4b942"; c.globalAlpha = 0.72; }
+    else c.fillStyle = "#121722";
+    c.fillRect(x, y, w, h);
+    if (on) c.restore();
+    c.strokeStyle = frame; c.lineWidth = Math.max(0.7, 0.012 * u);
+    c.strokeRect(x, y, w, h);
+    c.beginPath(); c.moveTo(x + w / 2, y); c.lineTo(x + w / 2, y + h);
+    if (cross) { c.moveTo(x, y + h * 0.4); c.lineTo(x + w, y + h * 0.4); }
+    c.stroke();
+  }
+  // the long wing on the left: one storey, a hipped red roof with two dormers
+  const wy = gy - 0.4 * u, wl = hx - 1.85 * u, wr = hx - 0.3 * u;
+  c.fillStyle = roof; poly([[wl - 0.05 * u, wy], [wr, wy], [wr, wy - 0.32 * u], [wl + 0.25 * u, wy - 0.32 * u]]); c.fill();
+  for (const dx of [0.5, 0.95]) {
+    const x = wl + dx * u;
+    c.fillStyle = wall; c.fillRect(x, wy - 0.27 * u, 0.16 * u, 0.15 * u);
+    c.fillStyle = roofDark; poly([[x - 0.03 * u, wy - 0.26 * u], [x + 0.08 * u, wy - 0.36 * u], [x + 0.19 * u, wy - 0.26 * u]]); c.fill();
+    win(x + 0.04 * u, wy - 0.235 * u, 0.08 * u, 0.09 * u, dx < 0.7, false);
+  }
+  c.fillStyle = wall; c.fillRect(wl, wy, wr - wl, gy - wy);
+  for (let i = 0; i < 6; i++) win(wl + (0.1 + i * 0.2) * u, gy - 0.32 * u, 0.1 * u, 0.17 * u, rnd() < 0.45, true);
+  // the See Salon: the glass-walled dining room, lit for dinner (and the Looping Louie tournament)
+  const sl = hx - 1.08 * u, sr = hx - 0.48 * u, st = gy - 0.36 * u;
+  c.fillStyle = "#1a1f2a"; c.fillRect(sl - 0.02 * u, st - 0.04 * u, sr - sl + 0.04 * u, 0.05 * u);
+  const panes = 5, pw = (sr - sl) / panes;
+  scene.salon = { u, panes: [] };
+  for (let i = 0; i < panes; i++) {
+    const q = { x: sl + i * pw + 0.01 * u, y: st + 0.03 * u, w: pw - 0.02 * u, h: gy - st - 0.05 * u };
+    win(q.x, q.y, q.w, q.h, true, true);
+    scene.salon.panes.push(q);
+  }
+  // a lower annexe on the right
+  c.fillStyle = roofDark; poly([[hx + 0.45 * u, gy - 0.36 * u], [hx + 0.98 * u, gy - 0.36 * u], [hx + 0.86 * u, gy - 0.58 * u], [hx + 0.45 * u, gy - 0.58 * u]]); c.fill();
+  c.fillStyle = wall; c.fillRect(hx + 0.45 * u, gy - 0.36 * u, 0.5 * u, 0.36 * u);
+  win(hx + 0.62 * u, gy - 0.28 * u, 0.16 * u, 0.15 * u, false, true);
+  // the main gable: steep, slate grey, terracotta verges, a chimney behind
+  const ex = 0.5 * u, top = gy - 0.5 * u, apex = top - 0.86 * u, eave = 0.08 * u;
+  c.fillStyle = "#3a2724"; c.fillRect(hx + 0.13 * u, apex + 0.1 * u, 0.09 * u, 0.25 * u);
+  c.fillStyle = wall; poly([[hx - ex, gy], [hx - ex, top], [hx, apex], [hx + ex, top], [hx + ex, gy]]); c.fill();
+  c.strokeStyle = roof; c.lineWidth = 0.06 * u; c.lineJoin = "miter";
+  c.beginPath(); c.moveTo(hx - ex - eave, top + 0.05 * u); c.lineTo(hx, apex - 0.015 * u); c.lineTo(hx + ex + eave, top + 0.05 * u); c.stroke();
+  win(hx - 0.4 * u, gy - 0.34 * u, 0.22 * u, 0.19 * u, true, true);
+  win(hx + 0.18 * u, gy - 0.34 * u, 0.22 * u, 0.19 * u, false, true);
+  for (const dx of [-0.24, 0, 0.24]) win(hx + (dx - 0.075) * u, top - 0.17 * u, 0.15 * u, 0.15 * u, dx === 0, true);
+  c.strokeStyle = frame; c.lineWidth = Math.max(0.7, 0.012 * u);
+  poly([[hx - 0.08 * u, apex + 0.36 * u], [hx, apex + 0.27 * u], [hx + 0.08 * u, apex + 0.36 * u]]); c.stroke();
+
+  // white birches in front, and string lights from the birches to the house
+  function birch(x, base, h, lean) {
+    const tx = x + lean * h, ty = base - h;
+    c.fillStyle = "rgba(16,30,25,0.95)";
+    for (let i = 0; i < 10; i++) blob(tx + (rnd() - 0.5) * 0.3 * u, ty + rnd() * 0.5 * h, (0.05 + rnd() * 0.07) * u, (0.06 + rnd() * 0.09) * u);
+    c.strokeStyle = "rgba(226,221,208,0.5)"; c.lineWidth = Math.max(1, 0.022 * u); c.lineCap = "round";
+    c.beginPath(); c.moveTo(x, base); c.quadraticCurveTo(x + lean * h * 0.2, base - h * 0.5, tx, ty + 0.1 * h); c.stroke();
+    c.strokeStyle = "rgba(10,12,16,0.7)"; c.lineWidth = Math.max(0.6, 0.008 * u);
+    for (let i = 0; i < 5; i++) { const k = 0.15 + rnd() * 0.6, yy = base - h * k, xx = x + lean * h * 0.2 * k * 2 * (1 - k / 2); c.beginPath(); c.moveTo(xx - 0.011 * u, yy); c.lineTo(xx + 0.008 * u, yy + 0.004 * u); c.stroke(); }
+  }
+  const trees = [[hx - 2.15 * u, 1.15, -0.04], [hx - 1.95 * u, 1.3, 0.03], [hx - 1.3 * u, 1.05, -0.02], [hx + 1.12 * u, 1.2, 0.04], [hx + 1.3 * u, 1.0, -0.03]];
+  for (const [x, h, lean] of trees) birch(x, gy + 0.03 * u, h * u, lean);
+  // (only the wire is drawn here: the bulbs twinkle, so drawSceneLights draws them every frame)
+  function lights(x0, y0, x1, y1, sag) {
+    const mx = (x0 + x1) / 2, my = Math.max(y0, y1) + sag, n = Math.max(4, Math.round(Math.abs(x1 - x0) / (0.07 * u)));
+    c.strokeStyle = "rgba(243,241,234,0.22)"; c.lineWidth = 0.8;
+    c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(mx, my, x1, y1); c.stroke();
+    for (let i = 1; i < n; i++) {
+      const t = i / n, x = (1 - t) * (1 - t) * x0 + 2 * t * (1 - t) * mx + t * t * x1, y = (1 - t) * (1 - t) * y0 + 2 * t * (1 - t) * my + t * t * y1;
+      scene.bulbs.push({ x, y: y + 0.01 * u, r: 0.011 * u, p: rnd() * TAU, s: 0.7 + rnd() * 1.3 });
+    }
+  }
+  lights(hx - 1.95 * u + 0.02 * u, gy - 0.82 * u, hx - 1.08 * u, st - 0.05 * u, 0.14 * u);
+  lights(hx - 1.3 * u, gy - 0.72 * u, hx - ex, top + 0.02 * u, 0.12 * u);
+  lights(hx + ex, top + 0.02 * u, hx + 1.12 * u + 0.04 * u, gy - 0.78 * u, 0.13 * u);
+
+  // mist along the ground, so the house settles into the night
+  g = c.createLinearGradient(0, gy - 0.16 * u, 0, gy + 0.1 * u);
+  g.addColorStop(0, "rgba(190,200,220,0)"); g.addColorStop(0.6, "rgba(190,200,220,0.07)"); g.addColorStop(1, "rgba(190,200,220,0)");
+  c.fillStyle = g; c.fillRect(0, gy - 0.16 * u, W, 0.26 * u);
+}
+/* Light-up moments: when a farmer goes out the See Salon flares in their colour; at a win it pulses in the
+   winner's colour while a wave of light runs along the string lights. */
+function sceneMoment(kind, seat) {
+  if (!scene.salon) return;
+  scene.moment = { kind, col: seat >= 0 ? SEAT_COL[seat].c : COL.tower, t0: performance.now() / 1000 };
+}
+/* ---------- Aquigai feature: the magic mushroom (drawing; the rules are in the game model: MU_*, muPos, Match "munch") ----------
+   A view can carry: mu {r, A, h, age} the flying mushroom; mw the seat that sent Louie up to it; mk 0..1, the progress of
+   the close-up of Louie eating it; tr, the seconds left of its 10 s effect. A view without them draws nothing here. */
+const TRIP_LEN = MU_TRIP;
+const TRIP_COLS = ["#ff8064", "#f4b942", "#7fcfa0", "#8fc9e6", "#b89af0"];
+function tripK(v) { return v.tr > 0 ? Math.max(0, Math.min(1, (TRIP_LEN - v.tr) / 0.6, v.tr / 1.2)) : 0; }
+function star4(c, x, y, r, rot) {
+  c.beginPath();
+  for (let i = 0; i < 8; i++) { const a = (rot || 0) + i * Math.PI / 4, q = i % 2 ? r * 0.32 : r; c.lineTo(x + Math.sin(a) * q, y - Math.cos(a) * q); }
+  c.closePath(); c.fill();
+}
+
+/* The mushroom: blue and glowing, with a little face and fairy wings. s is the cap's half-width; bite 0..1 eats the cap. */
+function drawMushroom(c, x, y, s, t, o) {
+  o = o || {};
+  const bite = o.bite || 0, lw = Math.max(1.2, s * 0.085);
+  c.save(); c.translate(x, y);
+  if (o.glow !== false) {
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
+    g.addColorStop(0, "rgba(110,215,255,0.55)"); g.addColorStop(0.5, "rgba(150,130,255,0.2)"); g.addColorStop(1, "rgba(150,130,255,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, s * 2.4, 0, TAU); c.fill();
+  }
+  c.lineJoin = "round"; c.lineCap = "round";
+  if (o.wings !== false) {
+    const fl = reduceMotion ? 0.3 : Math.sin(t * 13);
+    for (const sx of [-1, 1]) {
+      c.save(); c.translate(sx * s * 0.3, s * 0.2); c.rotate(sx * (-0.3 + 0.28 * fl));
+      c.fillStyle = "rgba(226,214,255,0.62)"; c.strokeStyle = "#8f73d6"; c.lineWidth = lw * 0.7;
+      c.beginPath(); c.ellipse(sx * s * 0.62, -s * 0.08, s * 0.58, s * 0.28, sx * 0.35, 0, TAU); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(sx * s * 0.48, s * 0.26, s * 0.34, s * 0.17, sx * -0.3, 0, TAU); c.fill(); c.stroke();
+      c.restore();
+    }
+  }
+  c.lineWidth = lw; c.strokeStyle = COL.ink;
+  // the stem, its skirt and a little face
+  c.beginPath(); c.moveTo(-s * 0.3, -s * 0.02); c.quadraticCurveTo(-s * 0.4, s * 0.55, -s * 0.27, s * 0.86);
+  c.quadraticCurveTo(0, s * 0.98, s * 0.27, s * 0.86); c.quadraticCurveTo(s * 0.4, s * 0.55, s * 0.3, -s * 0.02); c.closePath();
+  c.fillStyle = "#eaf7ff"; c.fill(); c.stroke();
+  c.beginPath(); c.ellipse(0, s * 0.2, s * 0.38, s * 0.09, 0, 0, Math.PI); c.fillStyle = "#bfe6f7"; c.fill(); c.stroke();
+  if (o.face !== false && s > 6) {
+    c.fillStyle = COL.ink;
+    for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * s * 0.11, s * 0.47, s * 0.045, s * 0.065, 0, 0, TAU); c.fill(); }
+    c.fillStyle = "rgba(236,104,104,0.5)";
+    for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * s * 0.2, s * 0.58, s * 0.06, s * 0.04, 0, 0, TAU); c.fill(); }
+    c.beginPath(); c.arc(0, s * 0.56, s * 0.08, 0.15 * Math.PI, 0.85 * Math.PI); c.lineWidth = lw * 0.7; c.stroke(); c.lineWidth = lw;
+  }
+  // the cap, deep blue to glowing cyan with luminous spots; bites come out of its right side
+  const bites = [];
+  for (let i = 0; i < 3; i++) if (bite > i / 3) bites.push([s * (0.82 - i * 0.4), -s * (0.3 + 0.14 * (i % 2)), s * 0.32 * Math.min(1, (bite - i / 3) * 3)]);
+  const noBites = () => {
+    if (!bites.length) return;
+    c.beginPath(); c.rect(-s * 3, -s * 3, s * 6, s * 6);
+    for (const [bx, by, br] of bites) { c.moveTo(bx + br, by); c.arc(bx, by, br, 0, TAU, true); }
+    c.clip("evenodd");
+  };
+  const cap = () => { c.beginPath(); c.moveTo(-s, s * 0.02); c.bezierCurveTo(-s * 1.02, -s * 0.98, s * 1.02, -s * 0.98, s, s * 0.02); c.quadraticCurveTo(0, s * 0.24, -s, s * 0.02); c.closePath(); };
+  c.save(); noBites();
+  const cg = c.createRadialGradient(-s * 0.25, -s * 0.55, 0, 0, -s * 0.2, s * 1.15);
+  cg.addColorStop(0, "#b4f3ff"); cg.addColorStop(0.45, "#3fb4f2"); cg.addColorStop(1, "#2350cf");
+  cap(); c.fillStyle = cg; c.fill();
+  c.save(); cap(); c.clip();
+  c.fillStyle = "#a5f1ff";   // the glowing gills under the rim
+  c.beginPath(); c.moveTo(-s * 0.94, s * 0.04); c.quadraticCurveTo(0, s * 0.27, s * 0.94, s * 0.04); c.quadraticCurveTo(0, s * 0.12, -s * 0.94, s * 0.04); c.fill();
+  c.fillStyle = "rgba(255,255,255,0.28)"; c.beginPath(); c.ellipse(-s * 0.35, -s * 0.5, s * 0.38, s * 0.16, -0.5, 0, TAU); c.fill();
+  c.fillStyle = "#e6fdff";
+  if (o.glow !== false) { c.shadowColor = "rgba(150,240,255,0.95)"; c.shadowBlur = s * 0.35 * DPR; }
+  for (const [dx, dy, r] of [[-0.55, -0.22, 0.11], [-0.12, -0.56, 0.13], [0.35, -0.44, 0.1], [0.7, -0.12, 0.08], [0.06, -0.2, 0.07], [-0.84, -0.03, 0.06]]) {
+    c.beginPath(); c.ellipse(dx * s, dy * s, r * s, r * s * 0.8, 0, 0, TAU); c.fill();
+  }
+  c.shadowBlur = 0;
+  for (const [bx, by, br] of bites) {   // the pale flesh round each bite, edged in ink
+    c.beginPath(); c.arc(bx, by, br, 0, TAU); c.strokeStyle = "#e9fbff"; c.lineWidth = s * 0.2; c.stroke();
+    c.strokeStyle = COL.ink; c.lineWidth = lw * 1.6; c.stroke();
+  }
+  c.restore();
+  cap(); c.strokeStyle = COL.ink; c.lineWidth = lw; c.stroke();
+  c.restore();
+  if (o.sparkle !== false) {
+    c.fillStyle = "#c9f6ff";
+    for (let i = 0; i < 4; i++) {
+      const a = t * 1.3 + i * TAU / 4, rr = s * (1.5 + 0.15 * Math.sin(t * 3 + i));
+      star4(c, Math.cos(a) * rr, Math.sin(a) * rr * 0.6 - s * 0.2, s * (0.14 + 0.05 * Math.sin(t * 5 + i * 2)), 0);
+    }
+  }
+  c.restore();
+}
+
+/* The heart: glossy red, with a little face and white wings. s is its half-width. */
+function drawHeart(c, x, y, s, t, o) {
+  o = o || {};
+  const lw = Math.max(1.2, s * 0.09);
+  c.save(); c.translate(x, y);
+  if (o.glow !== false) {
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, s * 2.3);
+    g.addColorStop(0, "rgba(255,120,170,0.5)"); g.addColorStop(1, "rgba(255,120,170,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, s * 2.3, 0, TAU); c.fill();
+  }
+  c.lineJoin = "round"; c.lineCap = "round";
+  if (o.wings !== false) {
+    const fl = reduceMotion ? 0.3 : Math.sin(t * 13);
+    for (const sx of [-1, 1]) {
+      c.save(); c.translate(sx * s * 0.55, -s * 0.2); c.rotate(sx * (-0.35 + 0.3 * fl));
+      c.fillStyle = "rgba(255,250,252,0.92)"; c.strokeStyle = "#e88aa8"; c.lineWidth = lw * 0.7;
+      c.beginPath(); c.ellipse(sx * s * 0.55, -s * 0.12, s * 0.55, s * 0.26, sx * 0.4, 0, TAU); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(sx * s * 0.42, s * 0.18, s * 0.32, s * 0.15, sx * -0.25, 0, TAU); c.fill(); c.stroke();
+      c.restore();
+    }
+  }
+  const heart = () => {
+    c.beginPath(); c.moveTo(0, s * 0.85);
+    c.bezierCurveTo(-s * 1.3, -s * 0.05, -s * 0.62, -s * 1.08, 0, -s * 0.42);
+    c.bezierCurveTo(s * 0.62, -s * 1.08, s * 1.3, -s * 0.05, 0, s * 0.85); c.closePath();
+  };
+  const g = c.createRadialGradient(-s * 0.35, -s * 0.45, 0, 0, 0, s * 1.2);
+  g.addColorStop(0, "#ffb3c8"); g.addColorStop(0.45, "#ff4f7e"); g.addColorStop(1, "#c4194a");
+  heart(); c.fillStyle = g; c.fill(); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+  c.fillStyle = "rgba(255,255,255,0.55)"; c.beginPath(); c.ellipse(-s * 0.45, -s * 0.42, s * 0.2, s * 0.1, -0.7, 0, TAU); c.fill();
+  if (o.face !== false && s > 6) {
+    c.fillStyle = COL.ink;
+    for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * s * 0.2, -s * 0.05, s * 0.06, s * 0.085, 0, 0, TAU); c.fill(); }
+    c.fillStyle = "rgba(255,210,225,0.8)";
+    for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * s * 0.38, s * 0.12, s * 0.09, s * 0.05, 0, 0, TAU); c.fill(); }
+    c.beginPath(); c.arc(0, s * 0.1, s * 0.11, 0.15 * Math.PI, 0.85 * Math.PI); c.lineWidth = lw * 0.7; c.stroke();
+  }
+  if (o.sparkle !== false) {
+    c.fillStyle = "#ffd1e0";
+    for (let i = 0; i < 4; i++) {
+      const a = t * 1.3 + i * TAU / 4, rr = s * (1.55 + 0.15 * Math.sin(t * 3 + i));
+      star4(c, Math.cos(a) * rr, Math.sin(a) * rr * 0.6 - s * 0.1, s * (0.14 + 0.05 * Math.sin(t * 5 + i * 2)), 0);
+    }
+  }
+  c.restore();
+}
+/* The magic hat: a black top hat with a red band, and a wand with a star. s is the brim's half-width; its brim sits at y. */
+function drawTopHat(c, x, y, s, t, o) {
+  o = o || {};
+  const lw = Math.max(1.2, s * 0.08);
+  c.save(); c.translate(x, y); if (o.tilt) c.rotate(o.tilt);
+  c.lineJoin = "round"; c.lineCap = "round";
+  if (o.glow !== false) {
+    const g = c.createRadialGradient(0, -s * 0.5, 0, 0, -s * 0.5, s * 2.4);
+    g.addColorStop(0, "rgba(180,130,255,0.5)"); g.addColorStop(1, "rgba(180,130,255,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(0, -s * 0.5, s * 2.4, 0, TAU); c.fill();
+  }
+  c.strokeStyle = COL.ink;
+  c.beginPath(); c.ellipse(0, 0, s, s * 0.26, 0, 0, TAU); c.fillStyle = "#1c1a24"; c.fill(); c.lineWidth = lw; c.stroke();
+  const cg = c.createLinearGradient(-s * 0.6, 0, s * 0.6, 0);
+  cg.addColorStop(0, "#3a3645"); cg.addColorStop(0.35, "#2a2733"); cg.addColorStop(1, "#121017");
+  c.beginPath(); c.moveTo(-s * 0.58, -s * 0.02); c.lineTo(-s * 0.63, -s * 1.15); c.ellipse(0, -s * 1.15, s * 0.63, s * 0.15, 0, Math.PI, 0);
+  c.lineTo(s * 0.58, -s * 0.02); c.ellipse(0, -s * 0.02, s * 0.58, s * 0.14, 0, 0, Math.PI); c.closePath();
+  c.fillStyle = cg; c.fill(); c.stroke();
+  c.beginPath(); c.ellipse(0, -s * 1.15, s * 0.63, s * 0.15, 0, 0, TAU); c.fillStyle = "#45404f"; c.fill(); c.stroke();
+  c.beginPath(); c.moveTo(-s * 0.6, -s * 0.38); c.lineTo(-s * 0.59, -s * 0.16); c.ellipse(0, -s * 0.16, s * 0.59, s * 0.14, 0, Math.PI, 0, true);
+  c.lineTo(s * 0.6, -s * 0.38); c.ellipse(0, -s * 0.38, s * 0.6, s * 0.14, 0, 0, Math.PI, false); c.closePath();
+  c.fillStyle = "#e5412f"; c.fill(); c.lineWidth = lw * 0.7; c.stroke();
+  c.fillStyle = "rgba(255,255,255,0.14)"; c.fillRect(-s * 0.45, -s * 1.08, s * 0.12, s * 0.66);
+  if (o.wand !== false) {   // the wand, propped against the hat, its star twinkling
+    c.save(); c.translate(s * 0.62, s * 0.06); c.rotate(0.62);
+    c.lineWidth = s * 0.16; c.strokeStyle = COL.ink; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s * 1.15); c.stroke();
+    c.lineWidth = s * 0.09; c.strokeStyle = "#1c1a24"; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s * 0.85); c.stroke();
+    c.strokeStyle = "#f3f1ea"; c.beginPath(); c.moveTo(0, -s * 0.85); c.lineTo(0, -s * 1.15); c.stroke();
+    c.fillStyle = "#ffd84a"; star4(c, 0, -s * 1.28, s * (0.3 + 0.06 * Math.sin(t * 6)), t * 0.8);
+    c.restore();
+  }
+  if (o.sparkle !== false) {
+    c.fillStyle = "#ffe48a";
+    for (let i = 0; i < 4; i++) {
+      const a = t * 1.1 + i * TAU / 4, rr = s * (1.4 + 0.15 * Math.sin(t * 3 + i));
+      star4(c, Math.cos(a) * rr, Math.sin(a) * rr * 0.6 - s * 0.6, s * (0.13 + 0.05 * Math.sin(t * 5 + i * 2)), 0);
+    }
+  }
+  c.restore();
+}
+/* The lotus: a pink water lily on its pad. s is its half-width; the pad sits at y. */
+function drawLotus(c, x, y, s, t, o) {
+  o = o || {};
+  const lw = Math.max(1.2, s * 0.07);
+  c.save(); c.translate(x, y);
+  c.lineJoin = "round"; c.lineCap = "round"; c.strokeStyle = COL.ink;
+  if (o.glow !== false) {
+    const g = c.createRadialGradient(0, -s * 0.3, 0, 0, -s * 0.3, s * 2.2);
+    g.addColorStop(0, "rgba(255,200,225,0.5)"); g.addColorStop(1, "rgba(255,200,225,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(0, -s * 0.3, s * 2.2, 0, TAU); c.fill();
+  }
+  c.beginPath(); c.moveTo(0, 0); c.ellipse(0, 0, s * 1.05, s * 0.3, 0, -1.35, -1.75 + TAU); c.closePath();   // the pad, with its notch
+  c.fillStyle = "#4f9a70"; c.fill(); c.lineWidth = lw; c.stroke();
+  const petal = (a, len, wid, c0, c1) => {
+    c.save(); c.translate(0, -s * 0.05); c.rotate(a);
+    const g = c.createLinearGradient(0, 0, 0, -len); g.addColorStop(0, c0); g.addColorStop(1, c1);
+    c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-wid, -len * 0.45, 0, -len); c.quadraticCurveTo(wid, -len * 0.45, 0, 0); c.closePath();
+    c.fillStyle = g; c.fill(); c.lineWidth = lw; c.stroke();
+    c.restore();
+  };
+  const sway = reduceMotion ? 0 : Math.sin(t * 1.4) * 0.04;
+  for (const a of [-1.15, 1.15, -0.62, 0.62, 0]) petal(a + sway, s * 0.95, s * 0.36, "#ff8fbf", "#ffd6e7");
+  for (const a of [-0.35, 0.35, 0]) petal(a * 0.9 - sway, s * 0.7, s * 0.27, "#ffb3d1", "#fff0f6");
+  c.beginPath(); c.ellipse(0, -s * 0.12, s * 0.16, s * 0.08, 0, 0, TAU); c.fillStyle = "#f4b942"; c.fill(); c.lineWidth = lw * 0.7; c.stroke();
+  if (o.sparkle !== false) {
+    c.fillStyle = "#fff0f6";
+    for (let i = 0; i < 3; i++) {
+      const a = t * 0.8 + i * TAU / 3, rr = s * (1.35 + 0.1 * Math.sin(t * 2 + i));
+      star4(c, Math.cos(a) * rr, Math.sin(a) * rr * 0.5 - s * 0.4, s * (0.12 + 0.04 * Math.sin(t * 4 + i)), 0);
+    }
+  }
+  c.restore();
+}
+
+/* In the game: the item flies high over the farm, fading in as it arrives. The pool of light it casts on the
+   board shows where it is. */
+const ITEM_LIGHT = ["120,220,255", "255,120,170", "180,130,255", "255,200,225"];
+const ITEM_NAMES = ["MAGIC MUSHROOM!", "A HEART!", "MAGIC HAT!", "LOTUS FLOWER!"];
+function drawItemShadow(v) {
+  const sh = P(v.mu.r, v.mu.A, 0), k = Math.min(1, v.mu.age / 1.2), c = ITEM_LIGHT[v.mu.k] || ITEM_LIGHT[0];
+  const g = ctx.createRadialGradient(sh.x, sh.y, 0, sh.x, sh.y, R * 0.14);
+  g.addColorStop(0, `rgba(${c},${(0.32 * k).toFixed(3)})`); g.addColorStop(1, `rgba(${c},0)`);
+  ctx.fillStyle = g; ell(sh.x, sh.y, R * 0.14, R * 0.14 * SY); ctx.fill();
+}
+function drawItemInGame(v, t) {
+  const p = P(v.mu.r, v.mu.A, hs(v.mu.h)), k = Math.min(1, v.mu.age / 1.2), s = R * 0.085 * (0.6 + 0.4 * k);
+  ctx.save(); ctx.globalAlpha = k;
+  if (v.mu.k === IT_HEART) drawHeart(ctx, p.x, p.y, s * (1 + (reduceMotion ? 0 : 0.07 * Math.sin(t * 7))), t);
+  else if (v.mu.k === IT_HAT) drawTopHat(ctx, p.x, p.y + s * 0.45, s, t, { tilt: reduceMotion ? 0 : 0.12 * Math.sin(t * 1.7) });
+  else if (v.mu.k === IT_LOTUS) drawLotus(ctx, p.x, p.y + s * 0.3, s, t);
+  else drawMushroom(ctx, p.x, p.y, s, t);
+  ctx.restore();
+}
+/* The heart on its way from Louie to the collector's chicken (fx.heart, set when it is collected). */
+function drawHeartFlight(t) {
+  const h = fx.heart;
+  if (!h) return;
+  const f = (t - h.t0) / HEART_FLY;
+  if (f > 1.05) { fx.heart = null; return; }
+  if (f < 0) return;
+  const g = Math.min(1, f), e = g * g * (3 - 2 * g);
+  const x = h.x0 + (h.x1 - h.x0) * e, y = h.y0 + (h.y1 - h.y0) * e - Math.sin(Math.PI * g) * R * 0.35;
+  for (let i = 3; i >= 1; i--) {   // little hearts trailing behind
+    const gi = Math.max(0, g - i * 0.07), ei = gi * gi * (3 - 2 * gi);
+    ctx.save(); ctx.globalAlpha = 0.5 - i * 0.12;
+    drawHeart(ctx, h.x0 + (h.x1 - h.x0) * ei, h.y0 + (h.y1 - h.y0) * ei - Math.sin(Math.PI * gi) * R * 0.35, R * 0.035, t, { wings: false, sparkle: false, face: false, glow: false });
+    ctx.restore();
+  }
+  drawHeart(ctx, x, y, R * 0.07, t, { sparkle: false });
+}
+/* The hat trick's next landing spot, sparkling on the board for the second before he pops up there. */
+function drawLanding(v, t) {
+  const q = P(v.rho, v.land.A, 0), k = 1 - v.land.t, rr = R * (0.07 + 0.03 * Math.sin(t * 12));
+  ctx.save();
+  ctx.globalAlpha = 0.35 + 0.55 * k;
+  const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, rr * 1.8);
+  g.addColorStop(0, "rgba(255,228,138,0.55)"); g.addColorStop(1, "rgba(180,130,255,0)");
+  ctx.fillStyle = g; ell(q.x, q.y, rr * 1.8, rr * 1.8 * SY); ctx.fill();
+  ctx.lineWidth = lw(0.008); ctx.strokeStyle = "#b89af0"; ctx.setLineDash([R * 0.02, R * 0.016]); ctx.lineDashOffset = -t * R * 0.2;
+  ell(q.x, q.y, rr, rr * SY); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#ffe48a";
+  for (let i = 0; i < 3; i++) { const a = t * 2.5 + i * TAU / 3; star4(ctx, q.x + Math.cos(a) * rr, q.y + Math.sin(a) * rr * SY - R * 0.03, R * 0.022, t); }
+  ctx.restore();
+}
+/* The meditation: the game stands still, Louie closes his eyes on a lotus, and a circle breathes ZEN_BREATHS slow
+   breaths (2 s in, 3 s out) for everyone to follow. zk runs 0..1 over ZEN_LEN. */
+function zenPhase(zk) {
+  const el = zk * ZEN_LEN - 0.5;
+  if (!(zk >= 0) || el < 0 || el >= 5 * ZEN_BREATHS) return null;
+  const i = Math.floor(el / 5), u = el - 5 * i;
+  return { i, inhale: u < 2, f: u < 2 ? u / 2 : (u - 2) / 3 };
+}
+function drawZen(v, t) {
+  const el = v.zk * ZEN_LEN, open = Math.min(1, el / 0.5, (ZEN_LEN - el) / 0.5), ease = 1 - Math.pow(1 - Math.max(0, open), 3);
+  const m = Math.min(W, H), mx = W / 2, my = H * 0.47, ph = zenPhase(v.zk);
+  const b = !ph ? 0 : ph.inhale ? 0.5 - 0.5 * Math.cos(Math.PI * ph.f) : 0.5 + 0.5 * Math.cos(Math.PI * ph.f);   // 0: out, 1: in
+  ctx.save();
+  ctx.fillStyle = `rgba(6,7,12,${(0.84 * ease).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = ease;
+  const rad = m * (0.2 + 0.11 * b);
+  const g = ctx.createRadialGradient(mx, my, rad * 0.2, mx, my, rad * 1.4);
+  g.addColorStop(0, "rgba(143,201,230,0.32)"); g.addColorStop(0.7, "rgba(184,154,240,0.16)"); g.addColorStop(1, "rgba(184,154,240,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, rad * 1.4, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx, my, rad, 0, TAU); ctx.lineWidth = Math.max(2, m * 0.006); ctx.strokeStyle = "rgba(243,241,234,0.75)"; ctx.stroke();
+  const fr = m * 0.085, fy = my - fr * (0.55 + 0.06 * b);   // he rises a little as he breathes in
+  drawLotus(ctx, mx, fy + fr * 2.25, fr * 2.3, t, { sparkle: false, glow: false });
+  drawLouieFace(ctx, mx, fy, fr, { t, look: currentLook(), mood: "zen", body: true, wind: 0 });
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = `${Math.round(Math.max(26, m * 0.06))}px ${FONT_D}`; ctx.fillStyle = "#f3f1ea";
+  ctx.fillText(!ph ? (el < 2 ? "Louie needs a moment" : "Namaste") : ph.inhale ? "Breathe in…" : "…and out", mx, my - m * 0.31 - m * 0.06);
+  for (let i = 0; i < ZEN_BREATHS; i++) {   // one dot per breath
+    const done = ph ? i <= ph.i : el > 2;
+    ctx.beginPath(); ctx.arc(mx + (i - (ZEN_BREATHS - 1) / 2) * m * 0.04, my + m * 0.31 + m * 0.045, m * 0.009, 0, TAU);
+    if (done) { ctx.fillStyle = COL.tower; ctx.fill(); } else { ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(243,241,234,0.5)"; ctx.stroke(); }
+  }
+  ctx.font = `500 ${Math.round(Math.max(14, m * 0.024))}px ${FONT_B}`; ctx.fillStyle = "rgba(243,241,234,0.72)";
+  ctx.fillText(v.mw >= 0 ? `${seatInfo(v.mw).name} found Louie a lotus. Breathe with him.` : "Louie found a lotus. Breathe with him.", mx, my + m * 0.31 + m * 0.1);
+  ctx.restore();
+}
+/* Little glowing mushrooms popping up round the farm while the effect lasts. */
+function drawSprouts(v, t, k) {
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * TAU + 0.26, p = P(1.33, a, 0), g = Math.min(1, Math.max(0, k * 1.6 - (i % 4) * 0.12)), s = R * 0.034 * g;
+    if (s > 0.5) drawMushroom(ctx, p.x, p.y - s * 0.9, s, t + i, { glow: false, wings: false, sparkle: false, face: false });
+  }
+}
+/* A rainbow ribbon behind Louie while he is under the influence. */
+function drawTrail(v, t, k) {
+  const n = 18, pts = [];
+  for (let i = 0; i <= n; i++) pts.push(louiePos(Object.assign({}, v, { A: v.A - i * 0.045 })));
+  ctx.save(); ctx.lineCap = "round";
+  const w = R * 0.02;
+  TRIP_COLS.forEach((col, b) => {
+    const off = (b - 2) * w;
+    ctx.strokeStyle = col; ctx.lineWidth = w * 1.1;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], q = pts[i + 1], dx = q.x - a.x, dy = q.y - a.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+      ctx.globalAlpha = 0.6 * k * (1 - i / n);
+      ctx.beginPath(); ctx.moveTo(a.x + nx * off, a.y + ny * off); ctx.lineTo(q.x + nx * off, q.y + ny * off); ctx.stroke();
+    }
+  });
+  ctx.restore();
+}
+/* Stars circling his head, cartoon-dizzy. */
+function dizzyOrbit(x, y, r, t, k) {
+  ctx.save();
+  for (let i = 0; i < 3; i++) {
+    const a = t * 3.2 + i * TAU / 3;
+    ctx.globalAlpha = k; ctx.fillStyle = TRIP_COLS[(i * 2) % 5];
+    star4(ctx, x + Math.cos(a) * r * 1.2, y + Math.sin(a) * r * 0.35, r * 0.3, a);
+  }
+  ctx.restore();
+}
+
+/* The hallucinations: forest animals and trees as glowing, breathing, colour-cycling outlines. Unit-sized paths. */
+const ANIMALS = {
+  owl(c) {
+    c.moveTo(0, -0.72); c.bezierCurveTo(0.62, -0.72, 0.72, 0.15, 0.55, 0.58); c.bezierCurveTo(0.38, 0.95, -0.38, 0.95, -0.55, 0.58); c.bezierCurveTo(-0.72, 0.15, -0.62, -0.72, 0, -0.72);
+    for (const s of [-1, 1]) {
+      c.moveTo(s * 0.4, -0.6); c.lineTo(s * 0.56, -0.95); c.lineTo(s * 0.18, -0.7);
+      c.moveTo(s * 0.24 + 0.2, -0.33); c.arc(s * 0.24, -0.33, 0.2, 0, TAU);
+      c.moveTo(s * 0.24 + 0.07, -0.33); c.arc(s * 0.24, -0.33, 0.07, 0, TAU);
+      c.moveTo(s * 0.5, -0.02); c.quadraticCurveTo(s * 0.64, 0.38, s * 0.36, 0.72);
+    }
+    c.moveTo(-0.08, -0.16); c.lineTo(0, -0.02); c.lineTo(0.08, -0.16);
+    for (const [x, y] of [[-0.14, 0.18], [0.14, 0.18], [0, 0.34], [-0.14, 0.5], [0.14, 0.5]]) { c.moveTo(x - 0.07, y); c.lineTo(x, y + 0.06); c.lineTo(x + 0.07, y); }
+  },
+  stag(c) {
+    c.moveTo(-0.27, -0.22); c.quadraticCurveTo(-0.3, 0.32, -0.12, 0.7); c.quadraticCurveTo(0, 0.8, 0.12, 0.7); c.quadraticCurveTo(0.3, 0.32, 0.27, -0.22); c.quadraticCurveTo(0, -0.4, -0.27, -0.22);
+    c.moveTo(0.07, 0.62); c.arc(0, 0.62, 0.07, 0, TAU);
+    for (const s of [-1, 1]) {
+      c.moveTo(s * 0.25, -0.16); c.quadraticCurveTo(s * 0.6, -0.34, s * 0.72, -0.1); c.quadraticCurveTo(s * 0.52, 0.06, s * 0.27, -0.02);
+      c.moveTo(s * 0.13 + 0.04, 0.04); c.arc(s * 0.13, 0.04, 0.04, 0, TAU);
+      c.moveTo(s * 0.14, -0.3); c.quadraticCurveTo(s * 0.32, -0.72, s * 0.62, -1.0);
+      c.moveTo(s * 0.22, -0.52); c.quadraticCurveTo(s * 0.5, -0.5, s * 0.66, -0.62);
+      c.moveTo(s * 0.3, -0.7); c.quadraticCurveTo(s * 0.2, -0.9, s * 0.24, -1.06);
+      c.moveTo(s * 0.46, -0.87); c.quadraticCurveTo(s * 0.4, -1.02, s * 0.44, -1.14);
+      c.moveTo(s * 0.55, -0.94); c.quadraticCurveTo(s * 0.74, -0.96, s * 0.84, -1.06);
+    }
+  },
+  fox(c) {
+    c.moveTo(-0.22, 0.85); c.quadraticCurveTo(-0.42, 0.25, -0.12, -0.18); c.quadraticCurveTo(-0.12, -0.42, 0.02, -0.5);
+    c.lineTo(0.06, -0.86); c.lineTo(0.2, -0.56); c.quadraticCurveTo(0.42, -0.52, 0.64, -0.38);
+    c.quadraticCurveTo(0.46, -0.24, 0.26, -0.2); c.quadraticCurveTo(0.36, 0.25, 0.24, 0.85); c.closePath();
+    c.moveTo(-0.04, -0.46); c.lineTo(-0.07, -0.8); c.lineTo(0.03, -0.6);
+    c.moveTo(0.67, -0.38); c.arc(0.64, -0.38, 0.03, 0, TAU);
+    c.moveTo(0.23, -0.4); c.arc(0.2, -0.4, 0.03, 0, TAU);
+    c.moveTo(0.1, 0.35); c.lineTo(0.08, 0.85); c.moveTo(0.2, 0.4); c.lineTo(0.19, 0.85);
+    c.moveTo(-0.2, 0.8); c.bezierCurveTo(-0.85, 0.9, -1.0, 0.3, -0.66, 0.02); c.bezierCurveTo(-0.6, 0.4, -0.48, 0.62, -0.18, 0.64);
+    c.moveTo(-0.66, 0.02); c.quadraticCurveTo(-0.8, 0.12, -0.84, 0.3);
+  },
+  rabbit(c) {
+    c.moveTo(-0.45, 0.85); c.bezierCurveTo(-0.8, 0.3, -0.45, -0.15, 0.0, -0.08); c.bezierCurveTo(0.1, -0.38, 0.52, -0.4, 0.58, -0.1);
+    c.bezierCurveTo(0.62, 0.12, 0.4, 0.2, 0.26, 0.18); c.bezierCurveTo(0.42, 0.45, 0.38, 0.8, 0.15, 0.85); c.closePath();
+    c.moveTo(0.16, -0.27); c.bezierCurveTo(-0.02, -0.92, 0.2, -1.05, 0.3, -0.3);
+    c.moveTo(0.3, -0.31); c.bezierCurveTo(0.36, -0.98, 0.62, -0.95, 0.42, -0.28);
+    c.moveTo(0.43, -0.1); c.arc(0.4, -0.1, 0.03, 0, TAU);
+    c.moveTo(-0.53, 0.55); c.arc(-0.65, 0.55, 0.12, 0, TAU);
+    c.moveTo(0.6, 0.0); c.lineTo(0.8, -0.04); c.moveTo(0.6, 0.04); c.lineTo(0.8, 0.08);
+  },
+  hedgehog(c) {
+    const n = 15;
+    c.moveTo(-0.8, 0.5);
+    for (let i = 1; i <= n; i++) { const a = Math.PI + (i / n) * Math.PI * 0.82, rr = i % 2 ? 1.18 : 1; c.lineTo(-0.1 + Math.cos(a) * 0.68 * rr, 0.5 + Math.sin(a) * 0.55 * rr); }
+    c.quadraticCurveTo(0.72, 0.3, 0.88, 0.46); c.quadraticCurveTo(0.64, 0.58, 0.42, 0.56); c.lineTo(-0.8, 0.56); c.closePath();
+    c.moveTo(0.92, 0.46); c.arc(0.88, 0.46, 0.04, 0, TAU);
+    c.moveTo(0.55, 0.33); c.arc(0.52, 0.33, 0.03, 0, TAU);
+    c.moveTo(-0.5, 0.56); c.lineTo(-0.5, 0.66); c.moveTo(0.2, 0.56); c.lineTo(0.2, 0.66);
+  },
+  heron(c) {
+    c.moveTo(-0.5, 0.25); c.bezierCurveTo(-0.3, -0.06, 0.18, -0.06, 0.26, 0.12); c.bezierCurveTo(0.2, 0.38, -0.2, 0.44, -0.5, 0.25);
+    c.moveTo(-0.5, 0.25); c.lineTo(-0.72, 0.36);
+    c.moveTo(0.2, 0.04); c.bezierCurveTo(0.46, -0.2, -0.02, -0.46, 0.14, -0.7);
+    c.moveTo(0.26, -0.72); c.arc(0.16, -0.72, 0.1, 0, TAU);
+    c.moveTo(0.25, -0.76); c.lineTo(0.62, -0.69); c.lineTo(0.25, -0.67);
+    c.moveTo(0.1, -0.77); c.quadraticCurveTo(-0.08, -0.82, -0.2, -0.72);
+    c.moveTo(-0.04, 0.38); c.lineTo(0, 0.98); c.moveTo(0.08, 0.36); c.lineTo(0.12, 0.98);
+    c.moveTo(0.19, -0.74); c.arc(0.17, -0.74, 0.02, 0, TAU);
+  },
+};
+function drawVision(c, name, x, y, sz, t, k, hue) {
+  const br = 1 + 0.05 * Math.sin(t * 1.8 + hue);
+  c.save(); c.lineJoin = "round"; c.lineCap = "round";
+  for (let i = 2; i >= 0; i--) {
+    const sc = sz * br * (1 + i * 0.11);
+    c.save(); c.translate(x, y); c.scale(sc, sc); c.beginPath(); ANIMALS[name](c); c.restore();
+    c.strokeStyle = `hsl(${Math.round(hue + t * 45 + i * 50) % 360},85%,${68 + i * 5}%)`;
+    c.globalAlpha = k * (i ? 0.22 / i : 0.8);
+    c.lineWidth = Math.max(1.4, sz * 0.022) * (i ? 1 : 1.3);
+    if (!i) { c.shadowColor = c.strokeStyle; c.shadowBlur = sz * 0.1 * DPR; }
+    c.stroke(); c.shadowBlur = 0;
+  }
+  c.restore();
+}
+function visionTree(c, kind, x, base, h, t, k, hue) {
+  const sway = Math.sin(t * 0.9 + hue) * h * 0.06, at = (f) => x + sway * f * f;   // the higher, the further it sways
+  c.save(); c.lineJoin = "round"; c.lineCap = "round";
+  for (let i = 1; i >= 0; i--) {
+    const g = 1 + i * 0.06;
+    c.beginPath();
+    if (kind === "birch") {
+      for (const sx of [-1, 1]) { c.moveTo(x + sx * h * 0.025 * g, base); c.quadraticCurveTo(at(0.5) + sx * h * 0.022 * g, base - h * 0.5, at(0.85) + sx * h * 0.015 * g, base - h * 0.85); }
+      for (let j = 0; j < 6; j++) { const f = 0.12 + j * 0.12, yy = base - h * f, xx = at(f); c.moveTo(xx - h * 0.02, yy); c.lineTo(xx + h * 0.012, yy + h * 0.008); }
+      for (let j = 0; j < 7; j++) {
+        const a = j / 7 * TAU, b2 = 1 + 0.08 * Math.sin(t * 1.6 + j), rr = h * (0.055 + 0.012 * Math.sin(t * 2 + j)) * g;
+        const xx = at(0.88) + Math.cos(a) * h * 0.11 * b2, yy = base - h * 0.9 + Math.sin(a) * h * 0.07 * b2;
+        c.moveTo(xx + rr, yy); c.arc(xx, yy, rr, 0, TAU);
+      }
+    } else {
+      const tiers = 5;
+      c.moveTo(at(1), base - h);
+      for (let j = 1; j <= tiers; j++) { const f = 1 - j / (tiers + 0.6), w = h * 0.08 * j * g; c.lineTo(at(f) + w, base - h * f); c.lineTo(at(f) + w * 0.35, base - h * f - h * 0.01); }
+      c.lineTo(at(0.05) + h * 0.02, base); c.lineTo(at(0.05) - h * 0.02, base);
+      for (let j = tiers; j >= 1; j--) { const f = 1 - j / (tiers + 0.6), w = h * 0.08 * j * g; c.lineTo(at(f) - w * 0.35, base - h * f - h * 0.01); c.lineTo(at(f) - w, base - h * f); }
+      c.closePath();
+    }
+    c.strokeStyle = `hsl(${Math.round(hue + t * 40 + i * 50) % 360},80%,${66 + i * 6}%)`;
+    c.globalAlpha = k * (i ? 0.1 : 0.32);
+    c.lineWidth = Math.max(1.5, h * 0.006) * (i ? 1 : 1.4);
+    if (!i) { c.shadowColor = c.strokeStyle; c.shadowBlur = h * 0.03 * DPR; }
+    c.stroke(); c.shadowBlur = 0;
+  }
+  c.restore();
+}
+/* Where the visions sit: beside the board on wide screens, above and below it on tall ones. The owl perches on the
+   Landhaus gable. [name, x, y, size in R]; trees are [kind, x, height in H]. */
+function tripSpots() {
+  if (W > H * 1.05) return {
+    animals: [["stag", cx + 0.95 * R, cy - 1.48 * R, 0.4], ["heron", cx + 1.95 * R, cy - 0.95 * R, 0.28], ["owl", cx - 0.75 * R, cy - 1.7 * R, 0.16],
+      ["rabbit", cx - 1.95 * R, cy - 0.3 * R, 0.25], ["hedgehog", cx - 1.85 * R, cy + 0.55 * R, 0.24], ["fox", cx + 1.95 * R, cy + 0.4 * R, 0.3]],
+    trees: [["birch", 0.04 * W, 0.62], ["pine", 0.13 * W, 0.5], ["pine", 0.87 * W, 0.55], ["birch", 0.96 * W, 0.66]],
+  };
+  return {
+    animals: [["stag", cx + 0.6 * R, cy - 2.25 * R, 0.55], ["owl", cx - 0.75 * R, cy - 1.95 * R, 0.2], ["heron", cx + 1.25 * R, cy - 1.3 * R, 0.32],
+      ["fox", cx - 0.95 * R, cy + 1.6 * R, 0.36], ["hedgehog", cx + 0.1 * R, cy + 1.75 * R, 0.3], ["rabbit", cx + 1.1 * R, cy + 1.6 * R, 0.33]],
+    trees: [["birch", 0.05 * W, 0.36], ["pine", 0.95 * W, 0.32]],
+  };
+}
+let tripFilterOn = "";
+function tripFilter(k, t) {   // the Landhaus backdrop shifts colour
+  const f = k > 0.01 ? `hue-rotate(${Math.round(k * ((t * 40) % 360))}deg) saturate(${(1 + 0.6 * k).toFixed(2)})` : "";
+  if (f !== tripFilterOn) { tripFilterOn = f; scenery.style.filter = f; }
+}
+/* Behind the board: ripples running out from the farm, swaying trees and the animals. */
+function drawTripBack(v, t, k) {
+  const sp = tripSpots();
+  ctx.save();
+  for (let i = 0; i < 6; i++) {
+    const f = (t * 0.3 + i / 6) % 1, rx = (0.4 + f * 2.4) * R;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, rx * SY, 0, 0, TAU);
+    ctx.strokeStyle = `hsl(${Math.round(t * 50 + i * 60) % 360},80%,65%)`; ctx.globalAlpha = 0.2 * k * (1 - f); ctx.lineWidth = R * 0.014; ctx.stroke();
+  }
+  sp.trees.forEach(([kind, x, f], i) => visionTree(ctx, kind, x, H + 4, f * H, t, k, i * 70));
+  sp.animals.forEach(([name, x, y, s], i) => drawVision(ctx, name, x + Math.sin(t * 0.5 + i) * R * 0.04, y + Math.cos(t * 0.4 + i * 1.7) * R * 0.03, s * R, t, k, i * 60));
+  ctx.restore();
+}
+/* In front of everything, faint so the levers and chickens stay readable: a colour-cycling vignette, drifting spores
+   and the timer. */
+const SPORES = Array.from({ length: 28 }, () => [Math.random(), Math.random(), 0.4 + Math.random() * 0.8, Math.random() * TAU]);
+function drawTripFront(v, t, k) {
+  ctx.save();
+  const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `hsla(${Math.round(t * 40) % 360},85%,62%,${(0.3 * k).toFixed(3)})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  SPORES.forEach(([x0, y0, sp, ph], i) => {
+    const x = x0 * W + Math.sin(t * 0.6 + ph) * R * 0.08, y = (((y0 - t * 0.03 * sp) % 1) + 1) % 1 * H;
+    ctx.globalAlpha = k * (0.35 + 0.35 * Math.sin(t * 2 + ph)); ctx.fillStyle = TRIP_COLS[i % TRIP_COLS.length];
+    star4(ctx, x, y, R * 0.018 * sp, t * sp);
+  });
+  ctx.restore();
+  drawTripTimer(v, t, k);
+}
+/* The countdown pill under the top controls (c and the centre x/y can be given, for the design sheet). */
+function drawTripTimer(v, t, k, c, mx, my) {
+  c = c || ctx;
+  const h = 36, w = 214, x = (mx == null ? W / 2 : mx) - w / 2, y = my == null ? (W < 680 ? 122 : 58) : my - h / 2;
+  const rr = h * 0.36, rx = x + h / 2 + 2, ry = y + h / 2;
+  c.save(); c.globalAlpha = Math.min(1, k * 1.5);
+  c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, h / 2); else c.rect(x, y, w, h);
+  c.fillStyle = "rgba(15,18,26,0.92)"; c.fill(); c.lineWidth = 1; c.strokeStyle = "rgba(243,241,234,0.25)"; c.stroke();
+  c.lineWidth = 3; c.lineCap = "round";
+  c.beginPath(); c.arc(rx, ry, rr, 0, TAU); c.strokeStyle = "rgba(243,241,234,0.15)"; c.stroke();
+  c.beginPath(); c.arc(rx, ry, rr, -Math.PI / 2, -Math.PI / 2 + TAU * v.tr / TRIP_LEN); c.strokeStyle = COL.tower; c.stroke();
+  drawMushroom(c, rx, ry + rr * 0.1, rr * 0.55, t, { glow: false, wings: false, sparkle: false, face: false });
+  c.font = `500 15px ${FONT_B}`; c.textBaseline = "middle"; c.textAlign = "left"; c.fillStyle = "#f3f1ea";
+  c.fillText(`Magic mushroom · ${Math.ceil(v.tr)} s`, rx + rr + 12, ry + 1);
+  c.restore();
+}
+
+/* Collecting it: a burst of coloured stars where Louie bit into it. */
+const glints = [];
+function mushroomBurst(x, y, cols) {
+  cols = cols || TRIP_COLS;
+  for (let i = 0; i < (reduceMotion ? 6 : 18); i++) {
+    const a = Math.random() * TAU, sp = R * (0.4 + Math.random() * 0.9);
+    glints.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - R * 0.3, t: 0, life: 0.7 + Math.random() * 0.5, c: cols[i % cols.length], r: Math.random() * TAU });
+  }
+}
+const HEART_COLS = ["#ff4f7e", "#ffb3c8", "#ff8fbf", "#fff0f6"];
+function drawGlints(dt) {
+  for (let i = glints.length - 1; i >= 0; i--) {
+    const q = glints[i];
+    q.t += dt; if (q.t > q.life) { glints.splice(i, 1); continue; }
+    q.vy += R * 0.8 * dt; q.vx *= 0.97; q.vy *= 0.97; q.x += q.vx * dt; q.y += q.vy * dt;
+    ctx.save(); ctx.globalAlpha = 1 - q.t / q.life; ctx.fillStyle = q.c; star4(ctx, q.x, q.y, R * 0.035, q.r + q.t * 4); ctx.restore();
+  }
+}
+
+/* The fart boost: when the mushroom wears off, a big purple cloud bursts out behind Louie's plane and keeps puffing
+   while he shoots off. Lumpy cartoon clouds that drift, grow, rise and fade. */
+const puffs = [];
+const PUFF_COLS = ["#8a55d4", "#a06ce6", "#b89af0", "#7a46c8", "#c7a8ff"];
+let puffAcc = 0;
+function tailOf(v) {
+  const p = louiePose(v), back = p.sc * 0.55;
+  return { x: p.L.x - Math.cos(p.heading) * back, y: p.L.y - Math.sin(p.heading) * back, heading: p.heading };
+}
+function puff(q, big) {
+  const a = q.heading + Math.PI + (Math.random() - 0.5) * (big ? 2.6 : 0.9), sp = R * (big ? 0.5 + Math.random() * 1.0 : 0.12 + Math.random() * 0.22);
+  puffs.push({ x: q.x, y: q.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: R * (big ? 0.05 + Math.random() * 0.06 : 0.028 + Math.random() * 0.03), big,
+    t: 0, life: big ? 1.0 + Math.random() * 0.7 : 0.9 + Math.random() * 0.5, c: PUFF_COLS[(Math.random() * PUFF_COLS.length) | 0] });
+}
+function fartBurst(v) { const q = tailOf(v); for (let i = 0; i < (reduceMotion ? 8 : 28); i++) puff(q, true); }
+function smokeBurst(x, y) { const n = reduceMotion ? 6 : 20; for (let i = 0; i < n; i++) puff({ x, y, heading: i / n * TAU }, false); }   // the hat trick's "poof"
+function emitPuffs(v, dt) {
+  puffAcc += dt * (v.bo < 0.5 ? 55 : 26) * (reduceMotion ? 0.3 : 1);
+  if (puffAcc < 1) return;
+  const q = tailOf(v);
+  while (puffAcc >= 1 && puffs.length < 160) { puff(q, false); puffAcc--; }
+  puffAcc = Math.min(puffAcc, 1);
+}
+function drawPuffs(dt) {
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const q = puffs[i];
+    q.t += dt; if (q.t > q.life) { puffs.splice(i, 1); continue; }
+    const k = Math.exp(-dt * 2.2);
+    q.vx *= k; q.vy = q.vy * k - R * (q.big ? 0.16 : 0.05) * dt; q.x += q.vx * dt; q.y += q.vy * dt;   // the big burst lifts off the board quickly
+    const f = q.t / q.life, r = q.r * (1 + 1.6 * f);
+    ctx.globalAlpha = (q.big ? 0.66 : 0.75) * Math.pow(1 - f, 1.5); ctx.fillStyle = q.c;
+    for (const [dx, dy, s] of [[0, 0, 1], [-0.55, 0.18, 0.72], [0.52, 0.22, 0.78], [0.1, -0.4, 0.62]]) { ctx.beginPath(); ctx.arc(q.x + dx * r, q.y + dy * r, r * s, 0, TAU); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* The close-up: the game stands still, an iris opens on Louie, the mushroom flutters into his mouth, he munches it,
+   and his eyes go spiral as the world starts to swirl. mk runs 0..1 over about 3 s. */
+function drawMunch(v, t) {
+  const p = v.mk, open = Math.min(1, p / 0.07, (1 - p) / 0.07), ease = 1 - Math.pow(1 - Math.max(0, open), 3);
+  const m = Math.min(W, H), rad = m * 0.34 * ease, mx = W / 2, my = H * 0.45;
+  ctx.save();
+  ctx.fillStyle = `rgba(6,7,12,${(0.78 * ease).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+  if (rad > 2) {
+    const phase = p < 0.3 ? 0 : p < 0.64 ? 1 : 2;
+    ctx.save(); ctx.beginPath(); ctx.arc(mx, my, rad, 0, TAU); ctx.clip();
+    const g = ctx.createRadialGradient(mx, my - rad * 0.3, 0, mx, my, rad);
+    g.addColorStop(0, "#2a2440"); g.addColorStop(1, "#0b0d14"); ctx.fillStyle = g; ctx.fillRect(mx - rad, my - rad, 2 * rad, 2 * rad);
+    if (phase === 2) {   // the world starts to swirl
+      const n = 14, sk = Math.min(1, (p - 0.64) / 0.12), a0 = t * 1.2;
+      for (let i = 0; i < n; i++) {
+        ctx.beginPath(); ctx.moveTo(mx, my); ctx.arc(mx, my, rad, a0 + i * TAU / n, a0 + (i + 0.5) * TAU / n); ctx.closePath();
+        ctx.fillStyle = `hsla(${Math.round(i * 360 / n + t * 60) % 360},80%,62%,${(0.35 * sk).toFixed(3)})`; ctx.fill();
+      }
+    }
+    const fr = rad * 0.46, fy = my + rad * 0.12;
+    drawLouieFace(ctx, mx, fy, fr, { t, look: currentLook(), mood: ["gasp", "munch", "dizzy"][phase], body: true, wind: 0.15, yaw: phase === 1 ? Math.sin(t * 9) * 0.06 : 0 });
+    if (phase < 2) {   // it flutters in and gets eaten, bite by bite
+      const a = phase === 0 ? Math.min(1, p / 0.28) : 1, e2 = a * a * (3 - 2 * a);
+      drawMushroom(ctx, mx + fr * (1.75 - 1.1 * e2), fy + fr * (0.1 + 0.62 * e2), fr * 0.34, t, { bite: phase === 1 ? Math.min(1, (p - 0.3) / 0.3) : 0, sparkle: phase === 0 });
+    }
+    if (phase === 1) {   // crumbs
+      ctx.fillStyle = "#fbf3e2";
+      for (let i = 0; i < 6; i++) { const f = ((t * 1.6 + i / 6) % 1); ctx.globalAlpha = 1 - f; ctx.beginPath(); ctx.arc(mx + fr * (0.55 + 0.25 * Math.sin(i * 2.1)), fy + fr * (0.8 + f * 0.9), fr * 0.035, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(mx, my, rad, 0, TAU); ctx.lineWidth = Math.max(3, rad * 0.022); ctx.strokeStyle = COL.tower; ctx.stroke();
+    // the sound words
+    const word = ["Ooh?", "NOM NOM", "Whoa…"][phase], f0 = [0, 0.3, 0.64][phase], pk = Math.min(1, (p - f0) / 0.06);
+    ctx.save(); ctx.translate(mx + rad * 0.62, my - rad * 0.78); ctx.rotate(-0.12); ctx.scale(0.6 + 0.4 * pk, 0.6 + 0.4 * pk);
+    ctx.font = `${Math.round(rad * 0.2)}px ${FONT_D}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineJoin = "round"; ctx.lineWidth = rad * 0.035; ctx.strokeStyle = COL.ink; ctx.strokeText(word, 0, 0);
+    ctx.fillStyle = COL.tower; ctx.fillText(word, 0, 0);
+    ctx.restore();
+    // the caption
+    ctx.globalAlpha = ease; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `${Math.round(Math.max(18, m * 0.036))}px ${FONT_D}`; ctx.fillStyle = "#f3f1ea";
+    ctx.fillText(v.mw >= 0 ? `${seatInfo(v.mw).name} fed Louie a magic mushroom` : "Louie found a magic mushroom", mx, my + rad + m * 0.07);
+    ctx.font = `500 ${Math.round(Math.max(14, m * 0.022))}px ${FONT_B}`; ctx.fillStyle = "rgba(243,241,234,0.7)";
+    ctx.fillText("He'll fly slowly for 10 seconds", mx, my + rad + m * 0.115);
+  }
+  ctx.restore();
+}
+
+/* Drawn every frame on the board canvas, under the board: the twinkling bulbs and any light-up moment. */
+function drawSceneLights() {
+  if (!scene.salon) return;
+  const now = performance.now() / 1000, m = scene.moment, u = scene.salon.u;
+  let e = 0, chase = 0, tau = 0;
+  if (m) {
+    tau = now - m.t0;
+    if (m.kind === "out") e = tau < 0.15 ? tau / 0.15 : Math.exp(-(tau - 0.15) / 0.6);
+    else if (tau < 4.8) { e = Math.sin(Math.PI * tau / 1.2) ** 2; chase = Math.min(1, tau / 0.4, (4.8 - tau) / 0.6); }
+    if (tau > 4.8) scene.moment = null;
+  }
+  ctx.save();
+  if (e > 0.01) {
+    const ps = scene.salon.panes, x0 = ps[0].x, x1 = ps[ps.length - 1].x + ps[ps.length - 1].w, yb = ps[0].y + ps[0].h;
+    const mid = (x0 + x1) / 2, rad = (x1 - x0) * 1.1;
+    const g = ctx.createRadialGradient(mid, yb, 0, mid, yb, rad);
+    g.addColorStop(0, tint(m.col, 0.6 * e)); g.addColorStop(1, tint(m.col, 0));
+    ctx.globalAlpha = SCENE_A; ctx.fillStyle = g; ctx.fillRect(mid - rad, yb - rad, 2 * rad, 2 * rad);
+    ctx.globalAlpha = SCENE_A * e; ctx.fillStyle = m.col; ctx.shadowColor = m.col; ctx.shadowBlur = 0.35 * u * DPR;
+    for (const q of ps) ctx.fillRect(q.x, q.y, q.w, q.h);
+    ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(243,241,234,0.5)"; ctx.lineWidth = Math.max(0.7, 0.012 * u);
+    ctx.beginPath();
+    for (const q of ps) { ctx.rect(q.x, q.y, q.w, q.h); ctx.moveTo(q.x + q.w / 2, q.y); ctx.lineTo(q.x + q.w / 2, q.y + q.h); ctx.moveTo(q.x, q.y + q.h * 0.4); ctx.lineTo(q.x + q.w, q.y + q.h * 0.4); }
+    ctx.stroke();
+  }
+  for (const b of scene.bulbs) {
+    let a = reduceMotion ? 0.8 : 0.66 + 0.2 * Math.sin(now * b.s + b.p) + 0.14 * Math.sin(now * b.s * 2.9 + b.p * 1.7), k = 1;
+    if (chase > 0) {
+      const w = reduceMotion ? 0.4 : (0.5 + 0.5 * Math.sin(TAU * (tau * 0.9 - b.x / (1.4 * u)))) ** 4;
+      a += chase * w; k += chase * w * 0.7;
+    }
+    ctx.globalAlpha = SCENE_A * Math.max(0.2, Math.min(1, a));
+    const d = 8 * b.r * k;
+    ctx.drawImage(scene.sprite, b.x - d / 2, b.y - d / 2, d, d);
+  }
+  ctx.restore();
+}
 
 let W = 0, H = 0, DPR = 1, R = 100, cx = 0, cy = 0, HP = 30, grassGrad = null;
 const SY = 0.56;
@@ -1040,6 +2177,7 @@ function layout() {
   HP = R * 0.28;
   grassGrad = ctx.createRadialGradient(cx - 0.35 * R, cy - 0.3 * R, 0.1 * R, cx, cy, 1.6 * R);
   grassGrad.addColorStop(0, COL.grassA); grassGrad.addColorStop(1, COL.grassB);
+  drawScenery();
 }
 function P(r, ang, h) { return { x: cx + Math.cos(ang) * r * R, y: cy + Math.sin(ang) * r * R * SY - (h || 0) * HP }; }
 function ell(x, y, rx, ry) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(1e-4, rx), Math.max(1e-4, ry), 0, 0, TAU); }
@@ -1155,7 +2293,8 @@ function drawChicken(s, j, v, t) {
   const ang = SEAT_ANGLES[s] + CHICK_OFF[j];
   const p = P(1.0, ang, 0), c = 0.1 * R;
   const col = seatChicks(v.cm, s) ? SEAT_COL[s] : GREY_SEAT;
-  const standing = (v.cm & bit) !== 0;
+  const back = t - fx.backT[b];               // a heart brought it back: it stands at once, before the online game confirms it
+  const standing = (v.cm & bit) !== 0 || ((v.al & bit) !== 0 && back >= 0 && back < 3);
   const f = p.x < cx ? 1 : -1;
   if (!standing) {
     drawPerch(p, c, col, true);
@@ -1172,13 +2311,22 @@ function drawChicken(s, j, v, t) {
   drawPerch(p, c, col, false);
   ctx.save(); ctx.translate(p.x, p.y);
   if (!(v.al & bit)) ctx.rotate(Math.sin(t * 40) * 0.22);
+  if (back >= 0 && back < 0.45 && !reduceMotion) {   // it drops back onto its perch with a bounce
+    const u = back / 0.45;
+    ctx.translate(0, -(1 - u) * (1 - u) * R * 0.45); ctx.scale(1 + 0.25 * Math.sin(Math.PI * u), 1 - 0.15 * Math.sin(Math.PI * u));
+  }
   ctx.scale(f, 1);
   chickenFig(c);
   ctx.restore();
 }
 
 function hs(h) { return h <= 3.5 ? h : 3.5 + (h - 3.5) * 0.4; }
-function louiePos(v) { return P(v.rho, v.A, hs(v.h)); }
+function louiePos(v) {
+  // Under the mushroom he weaves in and out and bobs a little. Only on screen: the bob stays small (under 0.3 of a
+  // Louie unit) so he still looks where he can be hit.
+  const k = tripK(v);
+  return k ? P(v.rho + k * 0.07 * Math.sin(v.A * 4.3), v.A, hs(v.h) + k * 0.13 * (1 + Math.sin(v.A * 6))) : P(v.rho, v.A, hs(v.h));
+}
 function drawTower(v) {
   const tw = 0.1 * R, top = cy - 0.92 * R;
   ctx.lineWidth = lw(0.008); ctx.strokeStyle = COL.ink; ctx.lineJoin = "round";
@@ -1559,23 +2707,36 @@ function drawLouieFace(c, x, y, r, o) {
   }
 
   if (faceOn) {
-    const whee = o.mood === "whee";
+    const gasp = o.mood === "gasp", dizzy = o.mood === "dizzy", munch = o.mood === "munch", kiss = o.mood === "kiss", zen = o.mood === "zen";
+    const whee = o.mood === "whee" || gasp;
     const look2 = sy * 0.05 * r;
     // eyebrows
     c.strokeStyle = FACE.hairDark; c.lineWidth = r * 0.09;
     for (const sx of [-1, 1]) {
       const a = sx * 0.42;
       if (vis(a) < 0.08) continue;
-      const up = whee ? -0.05 * r : 0;
+      const up = gasp ? -0.09 * r : whee ? -0.05 * r : dizzy ? sx * 0.05 * r : munch ? -0.03 * r : 0;
       c.beginPath(); c.moveTo(px(a - 0.22), -0.32 * r + up); c.quadraticCurveTo(px(a), -0.41 * r + up, px(a + 0.22), -0.33 * r + up); c.stroke();
     }
     // eyes
-    const blink = !whee && (t % 3.7) < 0.12;
+    const blink = !whee && !dizzy && !munch && !kiss && !zen && (t % 3.7) < 0.12;
     for (const sx of [-1, 1]) {
       const a = sx * 0.42, vv = vis(a);
       if (vv < 0.08) continue;
       const ex = px(a), ey = -0.1 * r;
       if (blink) { c.beginPath(); c.moveTo(ex - 0.1 * r * vv, ey); c.lineTo(ex + 0.1 * r * vv, ey); c.strokeStyle = COL.ink; c.lineWidth = lw; c.stroke(); continue; }
+      if (zen) { c.beginPath(); c.moveTo(ex - 0.1 * r * vv, ey); c.quadraticCurveTo(ex, ey + 0.07 * r, ex + 0.1 * r * vv, ey); c.strokeStyle = COL.ink; c.lineWidth = lw; c.stroke(); continue; }   // eyes closed, at peace
+      if (munch || kiss) { c.beginPath(); c.moveTo(ex - 0.1 * r * vv, ey + 0.03 * r); c.quadraticCurveTo(ex, ey - 0.08 * r, ex + 0.1 * r * vv, ey + 0.03 * r); c.strokeStyle = COL.ink; c.lineWidth = lw; c.stroke(); continue; }
+      if (dizzy) {
+        elli(ex, ey, 0.15 * r * Math.max(0.35, vv), 0.14 * r); c.fillStyle = COL.white; c.fill();
+        c.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const q = i / 40, ang = q * 3 * TAU + t * 7 * sx, rr = 0.012 * r + q * 0.115 * r;
+          const X = ex + Math.cos(ang) * rr * Math.max(0.35, vv), Y = ey + Math.sin(ang) * rr;
+          if (i) c.lineTo(X, Y); else c.moveTo(X, Y);
+        }
+        c.strokeStyle = COL.ink; c.lineWidth = lw * 0.85; c.stroke(); continue;
+      }
       elli(ex, ey, (whee ? 0.15 : 0.13) * r * Math.max(0.35, vv), (whee ? 0.14 : 0.11) * r); c.fillStyle = COL.white; c.fill();
       c.beginPath(); c.arc(ex + look2 * vv, ey + 0.01 * r, (whee ? 0.05 : 0.06) * r, 0, TAU); c.fillStyle = COL.ink; c.fill();
     }
@@ -1591,8 +2752,9 @@ function drawLouieFace(c, x, y, r, o) {
     }
     if (vis(0) > 0.05) frame(() => { c.beginPath(); c.moveTo(px(-0.09, 1.1), -0.14 * r); c.lineTo(px(0.09, 1.1), -0.14 * r); });
     // cheeks
-    c.fillStyle = FACE.cheek;
-    for (const sx of [-1, 1]) { const a = sx * 0.8, vv = vis(a); if (vv > 0.1) { elli(px(a), 0.3 * r, 0.12 * r * vv, 0.12 * r); c.fill(); } }
+    c.fillStyle = dizzy || munch || kiss ? "rgba(236,90,110,0.6)" : FACE.cheek;
+    const ck = munch || kiss ? 0.19 : dizzy ? 0.15 : 0.12;
+    for (const sx of [-1, 1]) { const a = sx * 0.8, vv = vis(a); if (vv > 0.1) { elli(px(a), 0.3 * r, ck * r * vv, ck * r); c.fill(); } }
     // full beard round the jaw
     if (look.beard >= 4) {
       const bp = [[-1.32, 0.1], [-1.38, 0.55], [-1.0, 1.0], [-0.5, 1.25], [0, 1.36], [0.5, 1.25], [1.0, 1.0], [1.38, 0.55], [1.32, 0.1],
@@ -1607,8 +2769,21 @@ function drawLouieFace(c, x, y, r, o) {
     // mouth
     if (vis(0) > -0.1) {
       const m1 = px(-0.38), m2 = px(0.38), mc = px(0);
-      if (whee) {
-        elli(mc, 0.7 * r, Math.max(0.05 * r, Math.abs(m2 - m1) * 0.32), 0.17 * r); c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+      if (kiss) {    // puckered up: mwah
+        elli(px(0.06), 0.68 * r, 0.09 * r, 0.08 * r); c.fillStyle = "#e0405f"; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+        elli(px(0.06), 0.68 * r, 0.03 * r, 0.025 * r); c.fillStyle = FACE.mouth; c.fill();
+      } else if (zen) {   // a small, calm smile
+        c.beginPath(); c.moveTo(px(-0.2), 0.64 * r); c.quadraticCurveTo(mc, 0.72 * r, px(0.2), 0.64 * r); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+      } else if (munch) {   // chewing: the mouth pops open and shut
+        if (Math.sin(t * 14) > 0.2) { elli(mc, 0.68 * r, Math.max(0.04 * r, Math.abs(m2 - m1) * 0.18), 0.09 * r); c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke(); }
+        else { c.beginPath(); c.moveTo(px(-0.2), 0.66 * r); c.quadraticCurveTo(mc, 0.74 * r, px(0.2), 0.66 * r); c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke(); }
+      } else if (dizzy) {   // a wide, wobbly grin with the tongue out
+        c.beginPath(); c.moveTo(m1, 0.58 * r); c.quadraticCurveTo(px(-0.15), 0.98 * r, mc, 0.86 * r); c.quadraticCurveTo(px(0.2), 1.0 * r, m2, 0.62 * r);
+        c.quadraticCurveTo(mc, 0.7 * r, m1, 0.58 * r); c.closePath();
+        c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
+        elli(px(0.12), 0.9 * r, Math.max(0.03 * r, Math.abs(m2 - m1) * 0.16), 0.1 * r); c.fillStyle = FACE.tongue; c.fill(); c.stroke();
+      } else if (whee) {
+        elli(mc, 0.7 * r, Math.max(0.05 * r, Math.abs(m2 - m1) * 0.32) * (gasp ? 1.1 : 1), 0.17 * r * (gasp ? 1.35 : 1)); c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
       } else if (Math.abs(m2 - m1) > 0.06 * r) {
         c.beginPath(); c.moveTo(m1, 0.6 * r); c.quadraticCurveTo(mc, 0.94 * r, m2, 0.6 * r); c.closePath();
         c.fillStyle = FACE.mouth; c.fill(); c.lineWidth = lw * 0.8; c.strokeStyle = COL.ink; c.stroke();
@@ -1648,12 +2823,16 @@ function drawLouieFace(c, x, y, r, o) {
 
 function louiePose(v) {
   const L = louiePos(v);
-  const heading = Math.atan2(Math.cos(v.A) * SY, -Math.sin(v.A));
+  let heading = Math.atan2(Math.cos(v.A) * SY, -Math.sin(v.A));
+  if (v.bo >= 0) heading += 0.35 * Math.sin(v.gt * 17) * Math.min(1, v.bo / 0.2, (MU_BOOST - v.bo) / 0.6);   // the fart boost: he fishtails, out of control
   let pitch = 0;
   if (fx.overTop) pitch = (Math.PI / 2) * Math.min(1, Math.max(0, (v.e - E_REST) / (Math.PI / 2 - E_REST)));   // nose up as the arm swings vertical
   else if (fx.loopV0 >= LOOP_V) pitch = TAU * Math.min(1, Math.max(0, (fx.loopV0 - v.vh) / (2 * fx.loopV0)));
   const hc = Math.min(v.h, 4);
-  return { L, heading, pitch, hc, sc: R * 0.3 * (1 + hc * 0.06), looping: !fx.overTop && fx.loopV0 >= LOOP_V && v.h > 0.2 };
+  let pop = 1;                                // the hat trick: he pops up out of nowhere, a little too big for a moment
+  const since = v.gt - v.tq;
+  if (v.tq > 0 && since >= 0 && since < 0.3 && !reduceMotion) { const u = since / 0.3; pop = 0.25 + 0.75 * u + 0.35 * Math.sin(Math.PI * u); }
+  return { L, heading, pitch, hc, pop, sc: R * 0.3 * (1 + hc * 0.06) * pop, looping: !fx.overTop && fx.loopV0 >= LOOP_V && v.h > 0.2 };
 }
 function drawLouie(v, t) {
   const p = louiePose(v);
@@ -1665,15 +2844,22 @@ function drawLouieHead(v, t) {
   let k = Math.cos(p.pitch);
   if (Math.abs(k) < 0.14) k = k < 0 ? -0.14 : 0.14;
   const off = -0.13 * p.sc * k;
-  const r = Math.max(13, R * 0.088) * (1 + p.hc * 0.05);
+  const r = Math.max(13, R * 0.088) * (1 + p.hc * 0.05) * p.pop;
   const side = Math.cos(p.heading) >= 0 ? 1 : -1;
   const hx = p.L.x + Math.cos(p.heading) * off, hy = p.L.y + Math.sin(p.heading) * off - r * 0.8;
   // he looks where the plane is going, nudged a little toward the camera
   const yaw = Math.atan2(-Math.sin(v.A), Math.cos(v.A) + 0.55);
+  const rot = p.looping ? p.pitch * side : fx.overTop ? -0.5 * p.pitch * side : 0;
   drawLouieFace(ctx, hx, hy, r, {
-    t, yaw, wind: 1, look: currentLook(), mood: p.looping || fx.overTop ? "whee" : "grin",
-    rot: p.looping ? p.pitch * side : fx.overTop ? -0.5 * p.pitch * side : 0,
+    t, yaw, wind: 1, look: currentLook(), rot,
+    mood: v.tr > 0 ? "dizzy" : v.bo >= 0 ? "gasp" : v.hr >= 0 ? "kiss" : p.looping || fx.overTop ? "whee" : "grin",
   });
+  if (v.tr > 0) dizzyOrbit(hx, hy - r * 1.3, r, t, tripK(v));
+  if (v.hat >= 0) {                           // the magic hat, on top of his own for the trick; it pops on and off
+    const off2 = v.hat < 0.25 ? v.hat / 0.25 : v.hatLeft < 0.25 ? Math.max(0, v.hatLeft) / 0.25 : 1;
+    const s = r * 0.62 * (reduceMotion ? 1 : off2), up = r * (0.8 + 0.25 * (1 - off2));
+    if (s > 0.5) drawTopHat(ctx, hx + Math.sin(rot) * up, hy - Math.cos(rot) * up, s, t, { tilt: rot - 0.15 * side, glow: false, sparkle: false, wand: false });
+  }
 }
 
 /* Louie in a round badge: the menu portrait and the Dress up Louie preview */
@@ -1742,9 +2928,21 @@ function drawPops(t) {
 function draw(v, t, dt) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
+  drawWorld(v, t, dt);
+}
+/* Everything on the table, in the current transform (the instant replay draws it zoomed in, on its TV). */
+function drawWorld(v, t, dt) {
+  drawSceneLights();
+  const tk = tripK(v);
+  tripFilter(tk, t);
+  Sound.rate = 1 - 0.4 * tk;                 // under the mushroom every sound is slowed down, like a tape
+  if (tk) drawTripBack(v, t, tk);
   if (shakeAmt > 0.3 && !reduceMotion) ctx.translate((Math.random() - 0.5) * shakeAmt, (Math.random() - 0.5) * shakeAmt);
   shakeAmt *= Math.exp(-dt / 0.1);
   drawBoard(v);
+  if (tk) drawSprouts(v, t, tk);
+  if (v.mu) drawItemShadow(v);
+  if (v.land) drawLanding(v, t);
   const sp = P(v.rho, v.A, 0), hh = Math.min(v.h, 3);
   ctx.fillStyle = `rgba(20,40,10,${(0.34 * (1 - hh / 4.2)).toFixed(3)})`;
   ell(sp.x, sp.y, R * 0.14 * (1 - hh / 6), R * 0.14 * SY * (1 - hh / 6)); ctx.fill();
@@ -1756,18 +2954,27 @@ function draw(v, t, dt) {
     if (v.inGame & (1 << s)) for (let j = 0; j < 3; j++) items.push([Math.sin(a + CHICK_OFF[j]) + j * 1e-3, () => drawChicken(s, j, v, t)]);
   }
   items.push([0, () => drawTower(v)]);
+  if (v.mu) items.push([Math.sin(v.mu.A) + 0.05, () => drawItemInGame(v, t)]);
+  if (tk) items.push([Math.sin(v.A) + 0.059, () => drawTrail(v, t, tk)]);
+  if (v.bo >= 0) emitPuffs(v, dt);
+  if (puffs.length) items.push([Math.sin(v.A) + 0.058, () => drawPuffs(dt)]);
   items.push([Math.sin(v.A) + 0.06, () => drawLouie(v, t)]);
   items.sort((x, y) => x[0] - y[0]);
   for (const it of items) it[1]();
   drawLouieHead(v, t);
   drawParticles(dt);
+  drawHeartFlight(t);
   drawPops(t);
+  drawGlints(dt);
+  if (tk) drawTripFront(v, t, tk);
+  if (v.mk >= 0) drawMunch(v, t);
+  if (v.zk >= 0) drawZen(v, t);
 }
 
 /* ---------- events seen by the screen (works the same for host and guests) ---------- */
-const fx = { key: "", prev: null, fallT: new Array(12).fill(-99), loopV0: 0, overTop: false };
-function detectEvents(v, t, audible) {
-  if (fx.key !== v.key) { fx.key = v.key; fx.prev = v; fx.fallT.fill(-99); fx.loopV0 = 0; fx.overTop = false; return; }
+const fx = { key: "", prev: null, fallT: new Array(12).fill(-99), backT: new Array(12).fill(-99), heart: null, loopV0: 0, overTop: false };
+function detectEvents(v, t, audible, live) {
+  if (fx.key !== v.key) { fx.key = v.key; fx.prev = v; fx.fallT.fill(-99); fx.backT.fill(-99); fx.heart = null; fx.loopV0 = 0; fx.overTop = false; return; }
   const p = fx.prev;
   for (let s = 0; s < 4; s++) {
     if (!(v.inGame & (1 << s))) continue;
@@ -1793,20 +3000,76 @@ function detectEvents(v, t, audible) {
     if (!seatChicks(v.cm, s)) {
       const qb = P(1.7, SEAT_ANGLES[s], 1.7);
       pop(qb.x, qb.y, "OUT!", SEAT_COL[s].c, R * 0.2, t);
+      sceneMoment("out", s);
       if (audible) setTimeout(() => Sound.knockedOut(), 420);
+      if (live) replay.queued = s;
     }
   }
+  if (v.mu && !p.mu && live) { app.itemUntil = performance.now() + 1500; app.itemText = ITEM_NAMES[v.mu.k] || ITEM_NAMES[0]; if (audible) Sound.sparkle(); }   // a magic item flutters in
+  if (v.mc > p.mc) {                         // Louie bit into it
+    const q = louiePos(v), up = q.y - R * 0.34;   // above him if there is room, else below (clear of the jump's own word at the lever)
+    pop(Math.min(Math.max(q.x, W * 0.3), W * 0.7), up > H * 0.16 ? up : q.y + R * 0.36, "MAGIC MUSHROOM!", v.mw >= 0 ? SEAT_COL[v.mw].c : COL.tower, R * 0.16, t);
+    mushroomBurst(q.x, q.y);
+    if (audible) Sound.gulp();
+  }
+  if (v.bo >= 0 && !(p.bo >= 0)) {           // the mushroom wears off with a massive fart
+    const q = louiePos(v), up = q.y - R * 0.34;
+    fartBurst(v);
+    pop(Math.min(Math.max(q.x, W * 0.25), W * 0.75), up > H * 0.16 ? up : q.y + R * 0.36, "PFFRRRT!", "#a06ce6", R * 0.22, t);
+    shakeAmt = Math.max(shakeAmt, R * 0.05);
+    if (audible) Sound.fart();
+  }
+  const word = (text, col, size) => {         // a word over Louie (under him when he is near the top)
+    const q = louiePos(v), up = q.y - R * 0.34;
+    pop(Math.min(Math.max(q.x, W * 0.25), W * 0.75), up > H * 0.16 ? up : q.y + R * 0.36, text, col, R * size, t);
+    return q;
+  };
+  const by = v.mw >= 0 ? SEAT_COL[v.mw].c : null;
+  if (v.hc > p.hc) {                         // a heart: Louie blows a kiss, and it flies to the collector's lost chicken
+    const q = word("MWAH!", by || "#ff4f7e", 0.2), s = v.mw;
+    const to = s < 0 ? { x: q.x, y: q.y - R * 0.6 } : v.hj >= 0 ? P(1, SEAT_ANGLES[s] + CHICK_OFF[v.hj], 0.35) : P(1.7, SEAT_ANGLES[s], 1.4);
+    fx.heart = { x0: q.x, y0: q.y, x1: to.x, y1: to.y, t0: t };
+    mushroomBurst(q.x, q.y, HEART_COLS);
+    if (audible) Sound.kiss();
+  }
+  if (p.hr >= 0 && !(v.hr >= 0) && v.hc === p.hc) {   // it lands: the chicken is back on its perch
+    if (v.hj >= 0 && v.mw >= 0 && (v.al & (1 << (v.mw * 3 + v.hj)))) {
+      const q = P(1, SEAT_ANGLES[v.mw] + CHICK_OFF[v.hj], 0.3);
+      fx.backT[v.mw * 3 + v.hj] = t;
+      mushroomBurst(q.x, q.y, HEART_COLS);
+      pop(q.x, q.y - R * 0.14, "+1", SEAT_COL[v.mw].c, R * 0.16, t);
+      if (audible) Sound.chickBack();
+    } else if (fx.heart) mushroomBurst(fx.heart.x1, fx.heart.y1, HEART_COLS);
+  }
+  if (v.tc > p.tc) {                         // the magic hat: abracadabra
+    const q = word("ABRACADABRA!", by || "#b89af0", 0.15);
+    mushroomBurst(q.x, q.y, ["#ffe48a", "#b89af0", "#f3f1ea"]);
+    if (audible) Sound.magic();
+  } else if (v.tk > p.tk) {                  // a teleport: poof, and there he is, a quarter-turn on
+    const a = louiePos(p), b = louiePos(v), last = v.tk % 4 === TP_AT.length;
+    smokeBurst(a.x, a.y);
+    mushroomBurst(b.x, b.y, ["#ffe48a", "#b89af0", "#f3f1ea"]);
+    if (last) word("TA-DA!", "#ffe48a", 0.18);
+    if (audible) { Sound.poof(); if (last) Sound.tada(); }
+  }
+  if (v.zc > p.zc) {                         // a lotus: in a moment Louie stops to breathe
+    const q = word("OMMM…", by || "#ffb3d1", 0.17);
+    mushroomBurst(q.x, q.y, ["#ffb3d1", "#fff0f6", "#7fcfa0"]);
+    if (audible) Sound.chime();
+  }
+  const zp = zenPhase(v.zk), zq = zenPhase(p.zk);   // each breath in and out of the meditation, for the ears too
+  if (zp && audible && (!zq || zp.i !== zq.i || zp.inhale !== zq.inhale)) Sound.breath(zp.inhale);
   if (v.fl !== p.fl) fx.overTop = true;
   if (v.h <= 1e-6 && v.vh <= 1e-6) { fx.loopV0 = 0; fx.overTop = false; }
   fx.prev = v;
 }
 
 /* Smooth over jumps (a late online hit, a corrected guess) instead of teleporting Louie.
-   Going over the top is a real jump of half a turn, so it is never smoothed. */
-const sm = { key: "", fl: 0, A: 0, e: 0, ve: 0, oA: 0, oE: 0, w: 3.5 };
+   Going over the top is a real jump of half a turn, and the hat trick's a real teleport, so they are never smoothed. */
+const sm = { key: "", fl: 0, tk: 0, A: 0, e: 0, ve: 0, oA: 0, oE: 0, w: 3.5 };
 function withHeight(v) { v.h = hOf(v.e); v.vh = vhOf(v.e, v.ve); v.rho = rhoOf(v.e); return v; }
 function smoothView(v, dt) {
-  if (sm.key !== v.key || sm.fl !== v.fl) { sm.key = v.key; sm.fl = v.fl; sm.A = v.A; sm.e = v.e; sm.ve = v.ve; sm.oA = 0; sm.oE = 0; return v; }
+  if (sm.key !== v.key || sm.fl !== v.fl || sm.tk !== v.tk) { sm.key = v.key; sm.fl = v.fl; sm.tk = v.tk; sm.A = v.A; sm.e = v.e; sm.ve = v.ve; sm.oA = 0; sm.oE = 0; return v; }
   if (v.status === "play" && dt > 0) {
     const dA = v.A - sm.A, eA = sm.w * dt;
     if (Math.abs(dA - eA) > 0.06 + 0.5 * eA) sm.oA -= dA - eA;
@@ -1821,6 +3084,327 @@ function smoothView(v, dt) {
   return withHeight(Object.assign({}, v, { A: v.A + sm.oA, e: Math.max(E_REST, Math.min(Math.PI / 2, v.e + sm.oE)) }));
 }
 
+/* ---------- instant replay ----------
+   Every live frame is kept for a few seconds. When a farmer loses their last
+   chicken the game stands still (status "replay", see Match), and each screen
+   plays its own last 2 seconds again on an old TV in the middle of the table,
+   zoomed in on Louie and that farmer's lever, at full speed, ending on a
+   freeze-frame that says what went wrong: about 3.6 s in all. */
+const REPLAY_BACK = 2;         // seconds of play shown before the knock-out
+const REPLAY_FREEZE = 0.8;     // seconds the last frame is held
+const TV_ON = 0.4, TV_OFF = 0.4;   // the TV switching on before it and off after it
+const replay = { key: "", buf: [], queued: -1, on: false, id: 0, plan: null, frames: null, i: 0, tau: 0, dtau: 0, age: 0, held: 0, off: 0, tagShown: false, overView: null };
+function replayRecord(v) {
+  if (v.key !== replay.key) { replay.key = v.key; replay.buf = []; }
+  if (v.status === "countdown") return;
+  const b = replay.buf;
+  if (b.length && b[b.length - 1].gt === v.gt) return;     // standing still: the knock-out frame is kept once
+  b.push(v);
+  while (b.length > 2 && b[0].gt < v.gt - REPLAY_BACK - 3.5) b.shift();
+}
+/* What went wrong for the farmer in seat s, read back from the recorded frames. */
+function replayPlan(s) {
+  const b = replay.buf;
+  let k = b.length - 1;
+  while (k > 0 && !seatChicks(b[k].al, s)) k--;          // the last frame with a chicken still up
+  if (k < 1 || k >= b.length - 1) return null;
+  const kI = k + 1, tk = b[kI].gt;
+  // when Louie reached this farmer's lever on that pass, and left the late-flick zone
+  const P0 = SEAT_ANGLES[s] + PAD_OFF;
+  const d = (i) => (((b[i].A - P0) % TAU) + TAU) % TAU;
+  let aI = -1;
+  for (let i = kI; i > 0 && b[i].gt > tk - 1.5; i--) if (d(i) < d(i - 1) - Math.PI) { aI = i; break; }
+  let ta = null, tz = null;
+  if (aI > 0) {
+    const d0 = d(aI - 1) - TAU, d1 = d(aI);
+    ta = b[aI - 1].gt + (-d0 / (d1 - d0)) * (b[aI].gt - b[aI - 1].gt);
+    tz = tk;
+    for (let i = aI; i <= kI; i++) if (d(i) >= LATE) { tz = b[i].gt; break; }
+  }
+  const up = (i) => b[i].lift[s] >= 0.25;
+  let press = -1;
+  const from = (ta == null ? tk : ta) - 1.2;
+  for (let i = 1; i <= kI; i++) if (b[i].gt >= from && up(i) && !up(i - 1)) press = i;
+  let upInReach = false, upTooHigh = false;
+  if (aI > 0) for (let i = aI; i <= kI && b[i].gt <= tz; i++) if (up(i)) { if (b[i].h < REACH) upInReach = true; else upTooHigh = true; }
+  const nm = seatInfo(s).name;
+  const sec = (x) => Math.max(0.01, x).toFixed(2) + " s";
+  let tag = "", why = `${nm} lost the last chicken.`;
+  if (ta != null) {
+    if (press < 0) { tag = "NO FLIP"; why = `${nm} didn't flip the lever.`; }
+    else {
+      const tp = b[press].gt;
+      let down = null, maxHold = 0;
+      for (let i = press; i <= kI; i++) { maxHold = Math.max(maxHold, b[i].hold[s]); if (!up(i)) { down = b[i].gt; break; } }
+      if (tp > tz) { tag = "TOO LATE"; why = `${nm} flipped ${sec(tp - ta)} too late.`; }
+      else if (down != null && down <= ta) {
+        if (maxHold >= MAX_HOLD - 0.03) { tag = "HELD TOO LONG"; why = `${nm} held the lever too long, and it gave way before Louie got there.`; }
+        else { tag = "TOO EARLY"; why = `${nm} flipped too early: the lever was back down ${sec(ta - down)} before Louie got there.`; }
+      } else if (upTooHigh && !upInReach) { tag = "TOO HIGH"; why = `${nm}'s lever was up, but Louie was still too high to reach.`; }
+      else { tag = "JUST MISSED"; why = `${nm} only just missed him.`; }
+    }
+  }
+  // who sent Louie this way: the last hit before the knock-out
+  let hitter = -1, band = 0;
+  for (let i = kI; i > 0 && b[i].gt > tk - 3.5 && hitter < 0; i--) {
+    for (let x = 0; x < 4; x++) if (b[i].hp[x] > b[i - 1].hp[x]) { hitter = x; band = b[i].hb[x]; break; }
+  }
+  const hn = hitter >= 0 ? seatInfo(hitter).name : "";
+  const aimed = hitter >= 0 && (hitter + [1, 1, 2, 2][band]) % 4 === s;     // the jump was meant to land on this farmer
+  const how = hitter < 0 ? "Nobody had hit Louie on his way round."
+    : hitter === s ? `Nobody hit Louie after ${nm}'s own last flip, so he came all the way round.`
+    : aimed ? [`${hn}'s hop sent Louie on to ${nm}.`, `${hn}'s dive brought Louie down on ${nm}'s chickens.`,
+      `${hn}'s looping dropped Louie onto ${nm}'s chickens.`, `${hn} sent Louie all the way up and over the tower, down onto ${nm}.`][band]
+    : `${hn}'s ${["hop", "dive", "looping", "shot over the tower"][band]} was the last hit, and nobody stopped Louie before ${nm}.`;
+  return { seat: s, tag, ta, title: `${nm} is out`, why, how, start: Math.max(b[0].gt, tk - REPLAY_BACK), end: tk + 0.05 };
+}
+function replayStart(s) {
+  replay.queued = -1;
+  const plan = replayPlan(s);
+  if (!plan) return false;
+  stats.replays++;
+  Object.assign(replay, { on: true, plan, frames: replay.buf.slice(), i: 0, tau: plan.start, dtau: 0, age: 0, held: 0, off: 0, tagShown: false });
+  replay.id++;
+  parts.length = 0; pops.length = 0; puffs.length = 0;
+  $("replay-title").textContent = plan.title;
+  $("replay-why").textContent = plan.why;
+  $("replay-how").textContent = plan.how;
+  $("replay-skip").textContent = "";          // the skip hint shows once a press can skip: on the freeze-frame
+  $("replay-card").hidden = false;
+  tvStart();
+  return true;
+}
+function showSkipHint() {
+  const touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  $("replay-skip").textContent = app.mode === "client" ? "" : touch ? "Tap to skip" : "Press your lever to skip";
+}
+/* Moves the replay clock on: the TV switches on, the last seconds play, the freeze-frame holds, the TV switches off.
+   Gives the view to draw, or null once it is over. */
+function replayStep(dt) {
+  const pl = replay.plan, b = replay.frames, tau0 = replay.tau;
+  replay.age += dt;
+  if (replay.held > REPLAY_FREEZE) {
+    if (!replay.off) $("replay-card").hidden = true;
+    replay.off += dt;
+    if (replay.off > TV_OFF) return null;
+  } else if (replay.tau >= pl.end) { if (!replay.held) showSkipHint(); replay.held += dt; }
+  else if (replay.age > TV_ON) replay.tau = Math.min(pl.end, replay.tau + dt);
+  replay.dtau = replay.tau - tau0;
+  while (replay.i < b.length - 2 && b[replay.i + 1].gt <= replay.tau) replay.i++;
+  const a = b[replay.i], c = b[Math.min(b.length - 1, replay.i + 1)];
+  const f = c.gt > a.gt ? Math.max(0, Math.min(1, (replay.tau - a.gt) / (c.gt - a.gt))) : 0;
+  const near = f < 0.5 ? a : c;
+  const glide = Math.abs(c.A - a.A) < 1 && c.fl === a.fl;
+  if (!replay.tagShown && pl.tag && pl.ta != null && replay.tau >= pl.ta) {
+    replay.tagShown = true;
+    const q = P(0.95, SEAT_ANGLES[pl.seat] + PAD_OFF, 1.1);
+    pop(q.x, q.y, pl.tag, SEAT_COL[pl.seat].c, R * 0.15, replay.tau);
+  }
+  // the chickens fall the moment they are hit (cm = al), not when the online game confirms it
+  return withHeight(Object.assign({}, near, { key: "replay" + replay.id, status: "play", gt: replay.tau, cm: near.al,
+    A: glide ? a.A + (c.A - a.A) * f : near.A, e: glide ? a.e + (c.e - a.e) * f : near.e }));
+}
+function replayStop() {
+  replay.on = false; replay.queued = -1; replay.frames = null; replay.overView = null;
+  $("replay-card").hidden = true; $("replay-card").style.top = ""; tv.box = null;
+  parts.length = 0; pops.length = 0;
+}
+/* The replay is over (or skipped): show the result, or play on shortly. */
+function replayEnd() {
+  const ov = replay.overView;
+  replayStop();
+  if (ov) { showOver(ov); Sound.win(); }
+  else if (app.match && app.match.status === "replay" && app.mode !== "client") app.match.rp = Math.min(app.match.rp, 0.8);
+}
+
+/* The replay's TV: a cartoon set in the middle of the table, over a dimmed still of the frozen game, with the
+   caption card under it. Its camera keeps Louie and the farmer's lever in shot and zooms in as he gets there. */
+const TV_H = 0.16 + 0.06 + 0.75 + 0.17 + 0.03;   // antenna, bezel, 4:3 screen, knobs strip, feet: in screen widths
+const tv = { still: null, cam: null, box: null, cardH: 0, bg: null, snow: [], scan: null };
+function tvStart() {
+  const c = tv.still || (tv.still = document.createElement("canvas"));
+  c.width = canvas.width; c.height = canvas.height;
+  c.getContext("2d").drawImage(canvas, 0, 0);       // the game as it stands, frozen behind the TV
+  tv.cam = null; tv.box = null;
+  tv.cardH = $("replay-card").offsetHeight + 22;    // with room for the skip hint that comes later
+  const cs = getComputedStyle(document.documentElement);
+  tv.bg = [cs.getPropertyValue("--table").trim() || "#563621", cs.getPropertyValue("--table-deep").trim() || "#2a190d"];
+  if (!tv.snow.length) for (let i = 0; i < 4; i++) {
+    const n = document.createElement("canvas"); n.width = 160; n.height = 120;
+    const nc = n.getContext("2d"), im = nc.createImageData(160, 120);
+    for (let j = 0; j < im.data.length; j += 4) { im.data[j] = im.data[j + 1] = im.data[j + 2] = Math.random() * 255; im.data[j + 3] = 255; }
+    nc.putImageData(im, 0, 0); tv.snow.push(n);
+  }
+  if (!tv.scan) {
+    const s = document.createElement("canvas"); s.width = 1; s.height = 3;
+    const sc = s.getContext("2d"); sc.fillStyle = "rgba(0,0,0,0.3)"; sc.fillRect(0, 0, 1, 1);
+    tv.scan = ctx.createPattern(s, "repeat");
+  }
+  tvLayout();                                       // the card goes under the TV before it is first seen
+}
+/* Where the TV goes: as big as fits with the caption card under it (on a short screen the card overlaps its foot). */
+function tvLayout() {
+  const narrow = W < 680, top = narrow ? 104 : 58, bot = narrow ? 70 : 20, room = H - top - bot;
+  let sw = Math.min(700, (W - 32) / 1.12, (room - tv.cardH - 12) / TV_H);
+  const roomy = sw >= 220;
+  if (!roomy) sw = Math.min((W - 32) / 1.12, room / TV_H);
+  sw = Math.max(140, sw);
+  const sh = sw * 0.75, p = sw * 0.06, gh = sw * TV_H + (roomy ? 12 + tv.cardH : 0);
+  const y0 = top + Math.max(0, (room - gh) / 2), sx = W / 2 - sw / 2, sy = y0 + sw * 0.22;
+  const card = Math.round(roomy ? sy + sh + sw * 0.2 + 12 : H - bot - tv.cardH + 22);
+  if (!tv.box || tv.box.card !== card) $("replay-card").style.top = card + "px";
+  return (tv.box = { sx, sy, sw, sh, p, card });
+}
+function tvCamera(v, b, dt) {
+  const s = replay.plan.seat, L = louiePos(v), Q = P(1, SEAT_ANGLES[s] + (PAD_OFF + CHICK_OFF[1]) / 2, 0.4), m = R * 0.55;
+  const zMin = Math.min(b.sw / (3.1 * R), b.sh / (2.9 * R)), zMax = b.sw / (1.35 * R);
+  let z = Math.min(b.sw / (Math.abs(L.x - Q.x) + 2 * m), b.sh / (Math.abs(L.y - Q.y) + 2 * m));
+  z = Math.max(zMin, Math.min(zMax, z)) * (replay.held > 0 ? 1.15 : 1);    // and a last push in on the freeze-frame
+  const c = tv.cam || (tv.cam = { x: cx, y: cy - 0.2 * R, z: zMin });    // it opens on the whole farm, then zooms in
+  const a = 1 - Math.exp(-dt / 0.28);
+  c.x += ((L.x + Q.x) / 2 - c.x) * a; c.y += ((L.y + Q.y) / 2 - c.y) * a; c.z *= Math.pow(z / c.z, a);
+  const hw = b.sw / 2 / c.z, hh = b.sh / 2 / c.z;                          // and stays on the table
+  c.x = 2 * hw >= W ? W / 2 : Math.max(hw, Math.min(W - hw, c.x));
+  c.y = 2 * hh >= H ? H / 2 : Math.max(hh, Math.min(H - hh, c.y));
+  return c;
+}
+function tvScreenPath(b, grow) {   // a picture tube: rounded corners, edges bowed out a little
+  const g = grow || 0, sx = b.sx - g, sy = b.sy - g, sw = b.sw + 2 * g, sh = b.sh + 2 * g, r = b.sw * 0.06 + g, k = b.sw * 0.012;
+  ctx.beginPath(); ctx.moveTo(sx + r, sy);
+  ctx.quadraticCurveTo(sx + sw / 2, sy - k, sx + sw - r, sy); ctx.quadraticCurveTo(sx + sw, sy, sx + sw, sy + r);
+  ctx.quadraticCurveTo(sx + sw + k, sy + sh / 2, sx + sw, sy + sh - r); ctx.quadraticCurveTo(sx + sw, sy + sh, sx + sw - r, sy + sh);
+  ctx.quadraticCurveTo(sx + sw / 2, sy + sh + k, sx + r, sy + sh); ctx.quadraticCurveTo(sx, sy + sh, sx, sy + sh - r);
+  ctx.quadraticCurveTo(sx - k, sy + sh / 2, sx, sy + r); ctx.quadraticCurveTo(sx, sy, sx + r, sy);
+  ctx.closePath();
+}
+function drawTVSet(b, now) {
+  const { sx, sy, sw, sh, p } = b, x0 = sx - p, y0 = sy - p, w = sw + 2 * p, h = sh + p + sw * 0.17, lw = Math.max(2.5, sw * 0.007);
+  const aq = document.documentElement.dataset.mode === "aquigai";
+  ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.strokeStyle = COL.ink;
+  // rabbit-ear antenna, wobbling a little
+  const ax = sx + sw / 2;
+  for (const [dir, len, ph] of [[-1, 1, 0], [1, 0.88, 1.3]]) {
+    const ang = -Math.PI / 2 + dir * (0.5 + (reduceMotion ? 0 : 0.04 * Math.sin(now * 2.2 + ph))), L = sw * 0.18 * len;
+    const ex = ax + Math.cos(ang) * L, ey = y0 + Math.sin(ang) * L;
+    ctx.lineWidth = Math.max(2, sw * 0.008); ctx.beginPath(); ctx.moveTo(ax, y0 - sw * 0.02); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.beginPath(); ctx.arc(ex, ey, sw * 0.014, 0, TAU); ctx.fillStyle = COL.steel; ctx.fill(); ctx.lineWidth = lw * 0.6; ctx.stroke();
+  }
+  ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.ellipse(ax, y0, sw * 0.075, sw * 0.04, 0, Math.PI, 0); ctx.fillStyle = "#3b2a22"; ctx.fill(); ctx.stroke();
+  // the wooden cabinet on two feet, with a hard toy shadow (a soft one at night)
+  const r = sw * 0.075;
+  if (aq) { ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.55)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14; rrect(x0, y0, w, h, r); ctx.fillStyle = "#7f4a26"; ctx.fill(); ctx.restore(); }
+  else { const d = Math.max(3, sw * 0.012); rrect(x0 + d, y0 + d, w, h, r); ctx.fillStyle = COL.ink; ctx.fill(); }
+  ctx.fillStyle = "#3b2a22";
+  for (const fx0 of [x0 + w * 0.14, x0 + w * 0.86 - sw * 0.08]) { rrect(fx0, y0 + h - lw, sw * 0.08, sw * 0.03 + lw, sw * 0.01); ctx.fill(); ctx.stroke(); }
+  const wood = ctx.createLinearGradient(0, y0, 0, y0 + h);
+  wood.addColorStop(0, "#b5763f"); wood.addColorStop(1, "#7f4a26");
+  rrect(x0, y0, w, h, r); ctx.fillStyle = wood; ctx.fill();
+  ctx.save(); ctx.clip();
+  ctx.strokeStyle = "rgba(70,35,14,0.28)"; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 9; i++) {   // the grain
+    const y = y0 + h * (0.05 + i * 0.115);
+    ctx.beginPath(); ctx.moveTo(x0, y);
+    ctx.bezierCurveTo(x0 + w * 0.3, y - sw * 0.012 * ((i % 3) - 1), x0 + w * 0.6, y + sw * 0.016 * ((i % 2) ? 1 : -1), x0 + w, y + sw * 0.006 * ((i % 3) - 1));
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,240,215,0.22)"; ctx.lineWidth = Math.max(1.5, sw * 0.005);
+  rrect(x0 + lw * 1.5, y0 + lw * 1.5, w - lw * 3, h - lw * 3, r * 0.85); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = lw; rrect(x0, y0, w, h, r); ctx.stroke();
+  // the bezel round the tube
+  tvScreenPath(b, sw * 0.022); ctx.fillStyle = "#1e1922"; ctx.fill(); ctx.stroke();
+  // the strip under the screen: speaker slots, a brass name plate, a red power light and two knobs
+  const yc = sy + sh + sw * 0.022 + (y0 + h - (sy + sh + sw * 0.022)) / 2, u = sw * 0.17;
+  ctx.fillStyle = "rgba(40,20,8,0.55)";
+  for (let i = 0; i < 4; i++) { rrect(sx + sw * 0.02, yc - u * 0.3 + i * u * 0.17, sw * 0.2, u * 0.08, u * 0.04); ctx.fill(); }
+  const pw = sw * 0.38, ph = u * 0.44, px = sx + sw * 0.5 - pw / 2 - sw * 0.02;
+  rrect(px, yc - ph / 2, pw, ph, ph * 0.25); ctx.fillStyle = COL.tower; ctx.fill(); ctx.lineWidth = lw * 0.8; ctx.stroke();
+  ctx.font = `${Math.round(Math.min(ph * 0.62, pw / 8.2))}px ${FONT_D}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#3b2a22"; ctx.fillText("INSTANT REPLAY", px + pw / 2, yc + ph * 0.06);
+  ctx.beginPath(); ctx.arc(sx + sw * 0.7, yc, u * 0.06, 0, TAU); ctx.fillStyle = "#ff4a3a"; ctx.shadowColor = "#ff4a3a"; ctx.shadowBlur = 8; ctx.fill(); ctx.shadowBlur = 0;
+  for (const [kx, ka] of [[sx + sw * 0.8, -0.7], [sx + sw * 0.93, 0.9]]) {
+    ctx.beginPath(); ctx.arc(kx, yc, u * 0.24, 0, TAU); ctx.fillStyle = COL.steel; ctx.fill(); ctx.lineWidth = lw * 0.8; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx, yc); ctx.lineTo(kx + Math.cos(ka - Math.PI / 2) * u * 0.2, yc + Math.sin(ka - Math.PI / 2) * u * 0.2); ctx.stroke();
+  }
+}
+/* The glass: scanlines, snow, a rolling bar, dark corners, a glare, and the on-screen REPLAY / SLOW-MO / pause marks. */
+function drawTVGlass(b, flash, now, osd) {
+  const { sx, sy, sw, sh } = b, k = sw * 0.012, mx = sx + sw / 2, my = sy + sh / 2;
+  ctx.save();
+  ctx.fillStyle = tv.scan; ctx.fillRect(sx - k, sy - k, sw + 2 * k, sh + 2 * k);
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = Math.max(reduceMotion ? 0.04 : 0.07, 0.9 * flash);
+  ctx.drawImage(tv.snow[Math.floor(now * 24) % tv.snow.length], sx - k, sy - k, sw + 2 * k, sh + 2 * k);
+  ctx.imageSmoothingEnabled = true;
+  if (flash > 0) { ctx.globalAlpha = flash; ctx.fillStyle = "#f2f6ff"; ctx.fillRect(sx - k, sy - k, sw + 2 * k, sh + 2 * k); }
+  ctx.globalAlpha = 1;
+  if (!reduceMotion) {
+    const ry = sy + ((now * 0.3) % 1.4 - 0.2) * sh, band = ctx.createLinearGradient(0, ry - sh * 0.08, 0, ry + sh * 0.08);
+    band.addColorStop(0, "rgba(255,255,255,0)"); band.addColorStop(0.5, "rgba(255,255,255,0.05)"); band.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = band; ctx.fillRect(sx - k, ry - sh * 0.08, sw + 2 * k, sh * 0.16);
+  }
+  const vg = ctx.createRadialGradient(mx, my, sh * 0.38, mx, my, Math.hypot(sw, sh) * 0.56);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.6)");
+  ctx.fillStyle = vg; ctx.fillRect(sx - k, sy - k, sw + 2 * k, sh + 2 * k);
+  const gl = ctx.createLinearGradient(sx, sy, sx + sw * 0.45, sy + sh * 0.55);
+  gl.addColorStop(0, "rgba(255,255,255,0.17)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.beginPath(); ctx.ellipse(sx + sw * 0.28, sy + sh * 0.16, sw * 0.42, sh * 0.26, -0.3, 0, TAU); ctx.fillStyle = gl; ctx.fill();
+  if (osd) {
+    const fs = Math.max(13, sw * 0.052), x = sx + sw * 0.07, y = sy + sh * 0.1;
+    ctx.font = `${Math.round(fs)}px ${FONT_D}`; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = fs * 0.16; ctx.strokeStyle = "#141018";
+    if (Math.floor(now * 2) % 2 === 0 || reduceMotion) { ctx.beginPath(); ctx.arc(x + fs * 0.3, y, fs * 0.28, 0, TAU); ctx.fillStyle = "#ff3b30"; ctx.fill(); }
+    ctx.textAlign = "left"; ctx.strokeText("REPLAY", x + fs * 0.8, y + fs * 0.06); ctx.fillStyle = "#ffffff"; ctx.fillText("REPLAY", x + fs * 0.8, y + fs * 0.06);
+    if (replay.held > 0) {   // pause
+      ctx.fillStyle = "#ffffff";
+      for (const dx of [0, fs * 0.42]) { ctx.beginPath(); ctx.rect(sx + sw * 0.93 - fs * 0.62 + dx, y - fs * 0.38, fs * 0.24, fs * 0.76); ctx.stroke(); ctx.fill(); }
+    }
+  }
+  ctx.restore();
+}
+/* One frame of the replay: the frozen game dimmed, the TV popping up and switching on, the picture, the glass. */
+function drawTV(v, dt) {
+  const b = tvLayout(), now = performance.now() / 1000, { sx, sy, sw, sh } = b, mx = sx + sw / 2, my = sy + sh / 2;
+  const fadeIn = Math.min(1, replay.age / 0.15), fadeOut = Math.min(1, Math.max(0, (replay.off - 0.3) / 0.1)), fade = fadeIn * (1 - fadeOut);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (tv.still) ctx.drawImage(tv.still, 0, 0, W, H);
+  ctx.fillStyle = `rgba(8,6,12,${(0.68 * fade).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  if (!reduceMotion) {   // it pops up, and drops away at the end
+    const k = Math.min(1, replay.age / 0.25), s = (0.9 + 0.1 * (1 - Math.pow(1 - k, 3)) + 0.025 * Math.sin(Math.PI * k)) * (1 - 0.08 * fadeOut);
+    ctx.translate(mx, my); ctx.scale(s, s); ctx.translate(-mx, -my);
+  }
+  drawTVSet(b, now);
+  // the tube: it opens from a bright line when it switches on, and closes to a line and a dot when it goes off
+  const on = Math.max(0, Math.min(1, (replay.age - 0.15) / (TV_ON - 0.15))), off = Math.min(1, replay.off / 0.3);
+  let bh = sh / 2 * on * on * (3 - 2 * on), bw = sw / 2, flash = 1 - on;
+  if (replay.off > 0) { const e = Math.min(1, off / 0.7); bh = Math.max(1.2, sh / 2 * (1 - e) * (1 - e)); bw = sw / 2 * (1 - 0.97 * Math.max(0, (off - 0.7) / 0.3)); flash = e; }
+  ctx.save();
+  tvScreenPath(b); ctx.clip();
+  ctx.fillStyle = "#07080c"; ctx.fillRect(sx - sw * 0.02, sy - sw * 0.02, sw * 1.04, sh + sw * 0.04);
+  if (bh > 1 && bw > 1) {
+    ctx.beginPath(); ctx.rect(mx - bw, my - bh, 2 * bw, 2 * bh); ctx.clip();
+    const c = tvCamera(v, b, dt);
+    if (replay.off < 0.2) {   // the picture (gone once the tube is down to a line)
+      ctx.save();
+      ctx.translate(mx, my); ctx.scale(c.z, c.z); ctx.translate(-c.x, -c.y);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 2.6 * R);
+      g.addColorStop(0, tv.bg[0]); g.addColorStop(1, tv.bg[1]);
+      ctx.fillStyle = g; ctx.fillRect(-W, -H, 3 * W, 3 * H);
+      if (document.documentElement.dataset.mode === "aquigai") { ctx.globalAlpha = SCENE_A; ctx.drawImage(scenery, 0, 0, W, H); ctx.globalAlpha = 1; }
+      drawWorld(v, v.gt, replay.dtau);
+      ctx.restore();
+    }
+    shakeAmt *= Math.exp(-dt / 0.1);         // the replay clock stops on the freeze-frame, so the shake dies away in real time
+    drawTVGlass(b, flash, now, replay.age > TV_ON && !replay.off);
+  }
+  ctx.restore();
+  ctx.lineWidth = Math.max(2, sw * 0.005); ctx.strokeStyle = "rgba(0,0,0,0.6)"; tvScreenPath(b); ctx.stroke();
+  ctx.restore();
+}
+
 /* ======================================================================
    App state, screens and HUD
    ====================================================================== */
@@ -1829,7 +3413,7 @@ const app = {
   demo: null, demoId: 0, demoOverAt: 0,
   match: null, gameId: 0, paused: false,
   localSeats: null, mirror: null,
-  prevStatus: "", goUntil: 0,
+  prevStatus: "", goUntil: 0, itemUntil: 0, itemText: "",
 };
 const screens = { menu: $("scr-menu"), louie: $("scr-louie"), local: $("scr-local"), online: $("scr-online"), table: $("scr-table"), pause: $("scr-pause"), over: $("scr-over") };
 let currentScreen = "menu";
@@ -1854,9 +3438,30 @@ function leverView(get) {
   for (let s = 0; s < 4; s++) { const l = get(s); lift.push(l.lift); hold.push(l.held ? l.hold : 0); }
   return { lift, hold };
 }
+/* The magic items as the screen shows them (Aquigai mode): where the flying one is and what it is; the mushroom's
+   close-up, effect and fart boost; the heart on its way; the hat trick; the meditation's progress. */
+function itemView(S, mkLeft, zkLeft, base) {
+  const b = S.gt - S.te - MU_GAP, hatOn = S.tt >= 0 && (S.tn < TP_AT.length || S.gt < S.tq + 1);
+  return {
+    mu: S.mu0 >= 0 ? Object.assign(muPos(S), { age: S.gt - S.mu0, k: S.ik }) : null, mw: S.mw,
+    mc: S.mc, mk: mkLeft > 0 ? 1 - mkLeft / MUNCH_LEN : -1, tr: S.te > S.gt ? S.te - S.gt : 0,
+    bo: S.te > 0 && b > 0 && b <= MU_BOOST ? b : -1,   // seconds into the fart boost
+    hc: S.hc, hj: S.hj, hr: S.hr,
+    tc: S.tc, tk: S.tc * 4 + S.tn, tq: S.tq, hat: hatOn ? S.gt - S.tt : -1, hatLeft: S.tn < TP_AT.length ? 99 : S.tq + 1 - S.gt, land: tpLanding(S, base),
+    zc: S.zc, zk: zkLeft > 0 ? 1 - zkLeft / ZEN_LEN : -1,
+  };
+}
+/* Where the hat trick's next teleport will land, once it is under a second away (null otherwise). */
+function tpLanding(S, base) {
+  if (!(S.tt >= 0) || S.tn >= TP_AT.length) return null;
+  const due = S.tt + TP_AT[S.tn], w = omega(S.gt, base, S.te);
+  let dA = (((TP_SAFE - (S.A - SEAT_ANGLES[0])) % QUARTER) + QUARTER) % QUARTER;   // to the next safe moment
+  while (S.gt + dA / w < due) dA += QUARTER;
+  return dA / w < 1 ? { A: S.A + dA + QUARTER, t: dA / w } : null;
+}
 function viewFromMatch(m, key) {
   const S = m.S;
-  return withHeight({ key, status: m.status, cd: m.cd, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, cm: m.committed, hp: S.hp.slice(), hb: S.hb.slice(), inGame: m.inGame, winner: m.winner, ...leverView((s) => m.leverOf(s)) });
+  return withHeight({ key, status: m.status, cd: m.cd, gt: S.gt, A: S.A, e: S.e, ve: S.ve, fl: S.fl, al: S.al, cm: m.committed, hp: S.hp.slice(), hb: S.hb.slice(), inGame: m.inGame, winner: m.winner, ...leverView((s) => m.leverOf(s)), ...itemView(S, m.status === "munch" ? m.mk : 0, m.status === "zen" ? m.zk : 0, m.cfg.base) });
 }
 function viewFromMirror(mi, now) {
   const snap = mi.snap;
@@ -1867,6 +3472,7 @@ function viewFromMirror(mi, now) {
     key: "client" + snap.r, status: snap.st, cd: snap.cd, gt: R2.gt, A: R2.A, e: R2.e, ve: R2.ve, fl: R2.fl, al: R2.al, cm: snap.cm, hp: R2.hp, hb: R2.hb,
     inGame: snap.g, winner: snap.w,
     ...leverView((s) => (s === mi.mySeat ? mi.ownLever(tau) : { lift: snap.lv[s] / 100, held: snap.hd[s] > 0, hold: snap.hd[s] / 1000 })),
+    ...itemView(R2, snap.st === "munch" ? snap.mk : 0, snap.st === "zen" ? snap.zk : 0, SPEEDS[snap.b] || SPEEDS.normal),
   });
 }
 
@@ -1914,14 +3520,17 @@ function updateBanner(v) {
   if (faster.key !== v.key || v.status !== "play") { faster.key = v.key; faster.n = n; }
   else if (n > faster.n) { faster.n = n; faster.until = performance.now() + 1100; Sound.faster(); }
   let text = "";
-  if (v.status === "countdown") text = String(Math.max(1, Math.ceil(v.cd)));
+  if (replay.on) text = "";
+  else if (v.status === "replay") text = "READY";
+  else if (v.status === "countdown") text = String(Math.max(1, Math.ceil(v.cd)));
   else if (performance.now() < app.goUntil) text = "GO!";
   else if (performance.now() < faster.until) text = "FASTER!";
+  else if (performance.now() < app.itemUntil) text = app.itemText;
   if (text === bannerText) return;
   bannerText = text;
   const el = $("banner");
   el.textContent = text;
-  el.classList.toggle("minor", text === "FASTER!");
+  el.classList.toggle("minor", text === "FASTER!" || ITEM_NAMES.includes(text));
   el.classList.remove("pop"); void el.offsetWidth; if (text) el.classList.add("pop");
   if (v.status === "countdown" && text) Sound.tick();
 }
@@ -1929,8 +3538,14 @@ function watchStatus(v) {
   if (v.status === app.prevStatus) return;
   const was = app.prevStatus;
   app.prevStatus = v.status;
-  if (v.status === "play" && was === "countdown") { app.goUntil = performance.now() + 700; Sound.go(); }
-  if (v.status === "over") { showOver(v); Sound.win(); }
+  if (v.status === "play" && (was === "countdown" || was === "replay" || was === "zen")) { app.goUntil = performance.now() + 700; Sound.go(); }
+  if (v.status === "munch") Sound.munch();
+  if (v.status === "zen") Sound.bowl();
+  if (v.status === "over") {
+    statsEnd("won");
+    if (replay.on) replay.overView = v;       // the result comes after the instant replay
+    else { showOver(v); Sound.win(); }
+  }
 }
 function enterGame() {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -1957,6 +3572,7 @@ function enterGame() {
   setTimeout(() => { hint.hidden = true; }, 4200);
 }
 function exitGame() {
+  replayStop();
   $("hud").hidden = true; $("controls").hidden = true; $("hint").hidden = true;
   $("banner").textContent = ""; bannerText = "";
   Sound.motorLevel(0, 3);
@@ -1968,6 +3584,7 @@ function humanSeats() {
 
 function showOver(v) {
   const w = v.winner;
+  sceneMoment("win", w);
   const card = $("over-card");
   const info = w >= 0 ? seatInfo(w) : null;
   card.style.setProperty("--seat", w >= 0 ? `var(--${SEAT_TOKENS[w]})` : "var(--sun)");
@@ -1988,11 +3605,134 @@ function showOver(v) {
     acts.append(p);
     add("Leave table", "alt", () => leaveTable(""));
   }
+  rateShow();
   showScreen("over");
 }
 function toMenu() {
+  statsLeaving(false);
   app.mode = "demo"; app.match = null; app.paused = false;
   exitGame(); showScreen("menu");
+}
+
+/* ---------- play records (the public copy only) ----------
+   One anonymous record per game and device, kept by our relay for Paul: the settings and the result, then the
+   optional stars and comment from the result card. No names, no device id. Off on claude.ai (the page can't reach
+   our server) and in any copy without the relay's address. */
+const GAME_VERSION = "v14";
+const ITEM_KEYS = ["mushroom", "heart", "hat", "lotus"];
+const stats = { id: "", game: -1, place: "", mode: "", t0: 0, replays: 0, skips: 0, done: true, endBody: null, last: null, stars: 0, sent: "", timer: 0, asked: false, shown: -1 };
+function statsUrl() { return inClaude() || RELAY_URL.includes("RELAY-SUBDOMAIN") ? "" : RELAY_URL.replace(/^ws/, "http") + "/s/"; }
+function statsPost(what, body, beacon) {
+  const url = statsUrl();
+  if (!url) return Promise.resolve(null);
+  const data = JSON.stringify(body);     // sent as text/plain, so the browser needs no preflight
+  if (beacon && navigator.sendBeacon) { try { navigator.sendBeacon(url + what, data); } catch (e) { /* page going away */ } return Promise.resolve(null); }
+  return fetch(url + what, { method: "POST", body: data, keepalive: true }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+}
+/* Who is at the table, as the record has it: kinds of seat only. */
+function seatKinds() {
+  if (app.mode === "local") return app.localSeats.map((st) => (st.type === "human" ? "you" : st.type === "cpu" ? "cpu:" + st.d : ""));
+  const L = net.lobby;
+  if (!L) return ["", "", "", ""];
+  return L.seats.map((st) => {
+    if (st.k === "c") return "cpu:" + (st.d || "normal");
+    if (st.k === "h") return net.isHost ? "you" : "other";
+    if (st.k === "r") return !net.isHost && st.peer === net.myPeer ? "you" : "other";
+    return "";
+  });
+}
+function statsStart(place) {
+  const game = stats.game + 1, prev = stats.mode, mode = document.documentElement.dataset.mode === "aquigai" ? "aquigai" : "normal";
+  Object.assign(stats, { id: "", game, place, mode, t0: performance.now(), replays: 0, skips: 0, done: false, endBody: null, last: null });
+  rateReset();
+  if (!statsUrl()) return;
+  const kinds = seatKinds(), L = net.lobby;
+  const m = Math.min(W, H), touch = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  statsPost("game", {
+    v: GAME_VERSION, mode, place, seq: game + 1, prev,   // the how-many-th game since the page opened, and the mode of the one before (memory only)
+    table: place === "local" ? "" : net.code, speed: place === "local" ? settings.speed : L ? L.sp : "",
+    humans: kinds.filter((k) => k === "you").length, remotes: kinds.filter((k) => k === "other").length,
+    cpus: kinds.filter((k) => k.startsWith("cpu")).length, levels: kinds.filter((k) => k.startsWith("cpu")).map((k) => k.slice(4)).join(","),
+    touch, lang: String(navigator.language || "").slice(0, 2).toLowerCase(), screen: m < 500 ? "phone" : touch ? "tablet" : "desktop",
+  }).then((r) => {
+    if (!r || typeof r.id !== "string" || stats.game !== game) return;
+    stats.id = r.id; statsFlush(false);
+    if (currentScreen === "over") rateShow();
+  });
+}
+/* The game is over, or someone left it: how it ended, from this screen's view. */
+function statsEnd(ended, beacon) {
+  if (stats.done) return;
+  stats.done = true;
+  const v = stats.last || {}, kinds = seatKinds(), inGame = v.inGame || 0, w = ended === "won" ? v.winner : -2;
+  stats.endBody = {
+    ended, result: w === -2 ? "" : w < 0 ? "louie" : (kinds[w] || "").startsWith("cpu") ? "cpu" : kinds[w] || "",
+    gameS: v.gt || 0, realS: (performance.now() - stats.t0) / 1000,
+    knockouts: [0, 1, 2, 3].filter((s) => (inGame & (1 << s)) && !seatChicks(v.cm || 0, s)).length,
+    replays: stats.replays, skips: stats.skips, items: [v.mc || 0, v.hc || 0, v.tc || 0, v.zc || 0],
+    missed: v.mu ? ITEM_KEYS[v.mu.k] || "" : "", missedS: v.mu ? v.mu.age : 0,   // the item still flying, uncollected, at the end
+  };
+  statsFlush(beacon);
+}
+function statsFlush(beacon) {
+  if (!stats.id || !stats.endBody) return;
+  statsPost("end", Object.assign({ id: stats.id }, stats.endBody), beacon);
+  stats.endBody = null;
+}
+function statsLeaving(beacon) {             // leaving a game before its end
+  if (!stats.done && (app.mode === "local" || app.mode === "host" || app.mode === "client")) statsEnd(beacon ? "closed" : "left", beacon);
+  rateFlush(beacon);
+}
+/* The stars and comment on the result card, sent as they are given (the comment after a pause in typing). */
+const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.5 1.2 6.4L12 17.1l-5.7 3.1 1.2-6.4-4.7-4.5 6.4-.8z"/></svg>';
+const RATE_NOTE = "Anonymous. We don't store your name; please leave personal details out of your comment.";
+function rateReset() {
+  clearTimeout(stats.timer);
+  stats.stars = 0; stats.sent = "";
+  $("rate").hidden = true; $("rate-text").value = ""; $("rate-send").hidden = false; $("rate-send").disabled = false;
+  $("rate-q").textContent = "How did you like it?";
+  $("rate-note").textContent = RATE_NOTE;
+  paintStars(0);
+}
+/* The stars open by themselves after the first game of a visit; after that they wait behind "Rate this game". */
+function rateShow() {
+  if (!stats.id || stats.shown === stats.game) return;
+  stats.shown = stats.game;
+  $("rate").classList.toggle("folded", stats.asked);
+  stats.asked = true;
+  $("rate").hidden = false;
+}
+function paintStars(n) { [...$("stars").children].forEach((b, i) => { b.classList.toggle("on", i < n); b.setAttribute("aria-checked", String(i + 1 === stats.stars)); }); }
+function rateFlush(beacon) {
+  clearTimeout(stats.timer);
+  const text = $("rate-text").value.trim().slice(0, 500);
+  if (!stats.id || text === stats.sent) return;
+  stats.sent = text;
+  statsPost("rate", { id: stats.id, feedback: text }, beacon);
+}
+function initRating() {
+  const box = $("stars");
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement("button");
+    b.type = "button"; b.setAttribute("role", "radio"); b.setAttribute("aria-label", `${i} star${i > 1 ? "s" : ""}`); b.setAttribute("aria-checked", "false");
+    b.innerHTML = STAR_SVG;
+    b.addEventListener("pointerenter", () => paintStars(i));
+    b.addEventListener("pointerleave", () => paintStars(stats.stars));
+    b.addEventListener("click", () => {
+      stats.stars = i; paintStars(i);
+      if (stats.id) statsPost("rate", { id: stats.id, stars: i });
+      $("rate-q").textContent = "Thanks! Anything we could do better?";
+    });
+    box.append(b);
+  }
+  $("rate-open").addEventListener("click", () => { $("rate").classList.remove("folded"); $("stars").firstChild.focus(); });
+  $("rate-text").addEventListener("input", () => { clearTimeout(stats.timer); stats.timer = setTimeout(() => rateFlush(false), 1500); });
+  $("rate-send").addEventListener("click", () => {
+    rateFlush(false);
+    $("rate-note").textContent = $("rate-text").value.trim() ? "Thanks for the idea!" : "Thanks!";
+    $("rate-send").hidden = true;
+  });
+  window.addEventListener("pagehide", () => statsLeaving(true));
 }
 
 /* ---------- local game ---------- */
@@ -2002,9 +3742,11 @@ function startLocal() {
   $("local-error").textContent = "";
   Sound.ensure();
   app.localSeats = settings.seats.map((st, s) => Object.assign({}, st, { name: cleanName(st.name, SEAT_NAMES[s]) }));
-  app.match = new Match({ seats, speed: settings.speed });
+  statsLeaving(false);
+  app.match = new Match({ seats, speed: settings.speed, replays: true, mushrooms: settings.mode === "aquigai" });
   app.gameId++; app.mode = "local"; app.paused = false;
   enterGame();
+  statsStart("local");
 }
 function pressLocal(s) { if (app.match) app.match.press(s); }
 function releaseLocal(s) { if (app.match) app.match.release(s); }
@@ -2278,7 +4020,7 @@ async function hostTableNow() {
   }
   Sound.ensure();
   Object.assign(net, { table: t, code, isHost: true, round: 0, lastAd: "", lastLobbyPush: "", peerSeen: new Map(), hostNick: nick });
-  net.lobby = { seats: [{ k: "h", nick }, { k: "x" }, { k: "x" }, { k: "x" }], sp: settings.speed, look: cleanLook(settings.louie) };
+  net.lobby = { seats: [{ k: "h", nick }, { k: "x" }, { k: "x" }, { k: "x" }], sp: settings.speed, look: cleanLook(settings.louie), mode: settings.mode };
   t.onPeers(onTablePeers, () => leaveTable("The connection to your table dropped."));
   pushHostPresence(true);
   updateAd();
@@ -2302,6 +4044,7 @@ async function joinTableNow(code) {
   showScreen("table"); renderTable();
 }
 function leaveTable(msg) {
+  statsLeaving(false);
   const t = net.table;
   net.table = null;
   if (t) t.leave().catch(() => {});
@@ -2309,6 +4052,7 @@ function leaveTable(msg) {
   net.isHost = false; net.lobby = null; net.lastAd = "";
   app.mirror = null; app.match = null; app.mode = "demo";
   exitGame();
+  tableMode(settings.mode);
   showScreen("online"); renderOnline();
   $("online-error").textContent = msg || "";
 }
@@ -2379,13 +4123,14 @@ function sanitizeLobby(l) {
     const k = ["h", "r", "c", "x"].includes(st.k) ? st.k : "x";
     return { k, peer: typeof st.peer === "string" ? st.peer.slice(0, 80) : "", nick: cleanName(st.nick, k === "h" ? "Host" : "Player"), d: DIFF[st.d] ? st.d : "normal" };
   });
-  return { seats, sp: SPEEDS[l.sp] ? l.sp : "normal", look: cleanLook(l.look) };
+  return { seats, sp: SPEEDS[l.sp] ? l.sp : "normal", look: cleanLook(l.look), mode: l.mode === "aquigai" ? "aquigai" : "normal" };
 }
 const num = (x, d) => (typeof x === "number" && Number.isFinite(x) ? x : d);
+const int = (x, lo, hi, d) => (Number.isInteger(x) && x >= lo && x <= hi ? x : d);
 const arr4 = (a, f) => [0, 1, 2, 3].map((i) => f(Array.isArray(a) ? a[i] : undefined));
 function sanitizeSnap(s) {
   if (!s || typeof s !== "object") return null;
-  const st = ["lobby", "countdown", "play", "over"].includes(s.st) ? s.st : null;
+  const st = ["lobby", "countdown", "play", "replay", "munch", "zen", "over"].includes(s.st) ? s.st : null;
   if (!st) return null;
   const out = { r: Number.isInteger(s.r) ? s.r : 0, st };
   if (st === "lobby") return out;
@@ -2398,8 +4143,14 @@ function sanitizeSnap(s) {
     ack: arr4(s.ack, (x) => (Number.isInteger(x) ? x : 0)), hb: arr4(s.hb, (x) => (Number.isInteger(x) && x >= 0 && x <= 3 ? x : 0)),
     w: Number.isInteger(s.w) ? s.w : -1,
     b: SPEEDS[s.b] ? s.b : "normal", g: (Number.isInteger(s.g) ? s.g : 0) & 15,
+    lh: int(s.lh, -1, 3, -1), mw: int(s.mw, -1, 3, -1), ik: int(s.ik, 0, 3, 0), io: int(s.io, 0, 255, 0), hj: int(s.hj, -1, 2, -1), tn: int(s.tn, 0, TP_AT.length, 0),
+    mc: int(s.mc, 0, 1e6, 0), hc: int(s.hc, 0, 1e6, 0), tc: int(s.tc, 0, 1e6, 0), zc: int(s.zc, 0, 1e6, 0),
+    mn: num(s.mn, -1), mu0: num(s.mu0, -1), ms: num(s.ms, 0), te: num(s.te, -1), hr: num(s.hr, -1), tt: num(s.tt, -1), tq: num(s.tq, -1),
+    mk: Math.max(0, Math.min(MUNCH_LEN, num(s.mk, 0))), zk: Math.max(0, Math.min(ZEN_LEN, num(s.zk, 0))),
   });
 }
+/* At an online table everyone sees the host's mode; leaving puts back your own. */
+function tableMode(m) { if ((document.documentElement.dataset.mode || "normal") !== m) applyMode(m); }
 function clientHandlePeers(peers) {
   const hosts = peers.filter((p) => !p.sameTab && p.presence && p.presence.louie === 1 && p.presence.host === true)
     .sort((a, b) => (a.peer < b.peer ? -1 : 1));
@@ -2413,17 +4164,19 @@ function clientHandlePeers(peers) {
   const lobby = sanitizeLobby(pr.lobby);
   const lobbyChanged = JSON.stringify(lobby) !== JSON.stringify(net.lobby);
   net.lobby = lobby;
+  if (lobby) tableMode(lobby.mode);
   const mySeat = lobby ? lobby.seats.findIndex((st) => st.k === "r" && st.peer === net.myPeer) : -1;
   const snap = sanitizeSnap(pr.s);
   if (!snap || !app.mirror) { if (lobbyChanged && currentScreen === "table") renderTable(); return; }
   app.mirror.mySeat = mySeat;
   app.mirror.onSnap(snap, performance.now() / 1000);
   if (snap.st === "lobby") {
-    if (app.mode === "client") { app.mode = "demo"; exitGame(); showScreen("table"); }
+    if (app.mode === "client") { statsLeaving(false); app.mode = "demo"; exitGame(); showScreen("table"); }
     if (lobbyChanged || currentScreen === "table") renderTable();
   } else if (app.mode !== "client") {
     app.mode = "client";
     enterGame();
+    statsStart("guest");
     if (mySeat < 0) toast("All seats are taken, so you're watching this round.");
   }
 }
@@ -2454,12 +4207,15 @@ function hostStart() {
   Sound.ensure();
   net.round++;
   net.peerSeen = new Map();
-  app.match = new Match({ seats, speed: L.sp });
+  statsLeaving(false);
+  app.match = new Match({ seats, speed: L.sp, replays: true, mushrooms: L.mode === "aquigai" });
   app.gameId++; app.mode = "host";
   enterGame();
+  statsStart("host");
   updateAd();
 }
 function hostBackToLobby() {
+  statsLeaving(false);
   app.match = null; app.mode = "demo";
   exitGame();
   if (net.room && net.table) hostHandlePeers(net.table.peers());
@@ -2532,6 +4288,11 @@ const typingTags = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 const held = new Map();      // key or pointer -> the lever it is holding ("c" for my online lever)
 function inputDown(id, seat) {
   if (held.has(id)) return;
+  if (replay.on && app.mode !== "client") {   // a lever press skips the replay, but only once it is on its freeze-frame,
+    held.set(id, "r");                         // so a player still flicking away sees what happened
+    if (replay.held > 0 && replay.held <= REPLAY_FREEZE) { replay.held = REPLAY_FREEZE + 1e-3; stats.skips++; }   // the TV switches off
+    return;
+  }
   if (app.mode === "client") { held.set(id, "c"); clientPress(); return; }
   if (seat == null) return;
   held.set(id, seat); pressLocal(seat);
@@ -2540,6 +4301,7 @@ function inputUp(id) {
   if (!held.has(id)) return;
   const seat = held.get(id);
   held.delete(id);
+  if (seat === "r") return;
   if (seat === "c") { if (![...held.values()].includes("c")) clientRelease(); return; }
   if (![...held.values()].includes(seat)) releaseLocal(seat);
 }
@@ -2593,6 +4355,7 @@ function wireUi() {
   wireLookControls();
   $("local-back").addEventListener("click", () => showScreen("menu"));
   $("local-start").addEventListener("click", startLocal);
+  segInit("mode-seg", () => settings.mode, (v) => { settings.mode = v; saveSettings(); applyMode(v); });
   segInit("speed-local", () => settings.speed, (v) => { settings.speed = v; saveSettings(); });
   paintTableSpeed = segInit("speed-table", () => (net.lobby ? net.lobby.sp : settings.speed), (v) => {
     if (!net.isHost || !net.lobby) return;
@@ -2710,9 +4473,22 @@ function frame(nowMs) {
     }
     v = viewFromMatch(app.demo, "demo" + app.demoId);
   }
-  detectEvents(v, t, live && settings.sound);
-  draw(smoothView(v, dt), t, dt);
-  if (live) { updateHud(v); updateBanner(v); watchStatus(v); }
+  if (replay.on && (!live || v.status === "play")) replayStop();   // left the game, or the host played on
+  let shown = replay.on ? replayStep(dt) : null;
+  if (shown) {
+    detectEvents(shown, shown.gt, settings.sound, false);
+    drawTV(shown, dt);
+  } else {
+    if (replay.on) replayEnd();
+    detectEvents(v, t, live && settings.sound, live);
+    shown = smoothView(v, dt);
+    draw(shown, t, dt);
+    if (live) {
+      replayRecord(shown);
+      if (replay.queued >= 0 && (v.status === "replay" || v.status === "over")) replayStart(replay.queued);
+    }
+  }
+  if (live) { stats.last = v; updateHud(replay.on ? shown : v); updateBanner(v); watchStatus(v); }
   if (currentScreen === "menu") drawPortrait(t);
   else if (currentScreen === "louie") drawPreview(t);
   Sound.motorLevel(live && v.status === "play" && !app.paused ? 0.03 : 0, sm.w);
@@ -2725,9 +4501,12 @@ function boot(data) {
   loadSettings();
   if (data && data.settings) mergeSettings(data.settings);
   Sound.on = settings.sound;
+  applyMode(settings.mode);
   paintSound();
   layout();
   wireUi();
+  initRating();
+  $("version").textContent = "Looping Louie " + GAME_VERSION;
   renderLocalSetup();
   initNet();
   newDemo();
