@@ -11,3 +11,13 @@ class_name = "Room"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+# Play records (POST /s/…): one anonymous row per game and device, live since 1 Nov 2026.
+# A schema change goes in a new migrations/000N_….sql (0001 has run), applied before the deploy:
+#   npx wrangler d1 migrations apply looping-louie-stats --remote
+#   npx wrangler deploy
+[[d1_databases]]
+binding = "STATS"
+database_name = "looping-louie-stats"
+database_id = "d9f962bc-42bb-4422-95f6-85f94c570b07"
+migrations_dir = "migrations"
