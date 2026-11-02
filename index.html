@@ -297,6 +297,8 @@ label.lbl { font-weight: 700; font-size: 13px; }
 .stars svg { width: 100%; height: 100%; display: block; }
 .stars path { fill: currentColor; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 #rate-text { resize: vertical; min-height: 44px; font-size: 14px; }
+.rate.sent .stars button { cursor: default; }
+.rate.sent #rate-text { resize: none; opacity: .7; }
 .rate-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .rate-note { font-size: 12px; color: var(--ink-soft); }
 :root[data-mode="aquigai"] .rate { border-top: 1px solid var(--line); }
@@ -588,7 +590,7 @@ const MU_FAST = 1.8;           // at up to 1.8x speed,
 const MU_KICKS = [[0.35, 5.5], [1.05, 3.6], [1.7, 6.2], [2.35, 4.4]];   // bouncing him up at these moments (s into the boost, upward speed), out of control
 const IT_MUSHROOM = 0, IT_HEART = 1, IT_HAT = 2, IT_LOTUS = 3;   // Aquigai's magic items, all flying like the mushroom (MU_H, MU_W, MU_HIT, ITEM_LAPS)
 const HEART_FLY = 0.8;         // the heart: one of the collector's lost chickens comes back when it lands, this long after
-const TP_AT = [1.2, 3.6, 6];   // the magic hat: Louie vanishes and pops up a quarter-turn on, at the first safe moment after each of these (s after the hat)
+const TP_AT = [1.2, 3.6, 6, 8.4, 10.8];   // the magic hat: Louie vanishes and pops up a quarter-turn on, at the first safe moment after each of these (s after the hat; five, Paul 2 Nov)
 const TP_SAFE = 0.3;           // a safe moment: just past a farmer's chickens (radians past their barn), so he lands just past the next farmer's
 const QUARTER = TAU / 4;
 const ZEN_BREATHS = 2;         // the lotus: the game stands still for two deep breaths of 5 s,
@@ -3046,7 +3048,7 @@ function detectEvents(v, t, audible, live) {
     mushroomBurst(q.x, q.y, ["#ffe48a", "#b89af0", "#f3f1ea"]);
     if (audible) Sound.magic();
   } else if (v.tk > p.tk) {                  // a teleport: poof, and there he is, a quarter-turn on
-    const a = louiePos(p), b = louiePos(v), last = v.tk % 4 === TP_AT.length;
+    const a = louiePos(p), b = louiePos(v), last = v.tk % (TP_AT.length + 1) === TP_AT.length;
     smokeBurst(a.x, a.y);
     mushroomBurst(b.x, b.y, ["#ffe48a", "#b89af0", "#f3f1ea"]);
     if (last) word("TA-DA!", "#ffe48a", 0.18);
@@ -3447,7 +3449,7 @@ function itemView(S, mkLeft, zkLeft, base) {
     mc: S.mc, mk: mkLeft > 0 ? 1 - mkLeft / MUNCH_LEN : -1, tr: S.te > S.gt ? S.te - S.gt : 0,
     bo: S.te > 0 && b > 0 && b <= MU_BOOST ? b : -1,   // seconds into the fart boost
     hc: S.hc, hj: S.hj, hr: S.hr,
-    tc: S.tc, tk: S.tc * 4 + S.tn, tq: S.tq, hat: hatOn ? S.gt - S.tt : -1, hatLeft: S.tn < TP_AT.length ? 99 : S.tq + 1 - S.gt, land: tpLanding(S, base),
+    tc: S.tc, tk: S.tc * (TP_AT.length + 1) + S.tn, tq: S.tq, hat: hatOn ? S.gt - S.tt : -1, hatLeft: S.tn < TP_AT.length ? 99 : S.tq + 1 - S.gt, land: tpLanding(S, base),
     zc: S.zc, zk: zkLeft > 0 ? 1 - zkLeft / ZEN_LEN : -1,
   };
 }
@@ -3618,7 +3620,7 @@ function toMenu() {
    One anonymous record per game and device, kept by our relay for Paul: the settings and the result, then the
    optional stars and comment from the result card. No names, no device id. Off on claude.ai (the page can't reach
    our server) and in any copy without the relay's address. */
-const GAME_VERSION = "v14";
+const GAME_VERSION = "v16";
 const ITEM_KEYS = ["mushroom", "heart", "hat", "lotus"];
 const stats = { id: "", game: -1, place: "", mode: "", t0: 0, replays: 0, skips: 0, done: true, endBody: null, last: null, stars: 0, sent: "", timer: 0, asked: false, shown: -1 };
 function statsUrl() { return inClaude() || RELAY_URL.includes("RELAY-SUBDOMAIN") ? "" : RELAY_URL.replace(/^ws/, "http") + "/s/"; }
@@ -3692,7 +3694,14 @@ function rateReset() {
   $("rate").hidden = true; $("rate-text").value = ""; $("rate-send").hidden = false; $("rate-send").disabled = false;
   $("rate-q").textContent = "How did you like it?";
   $("rate-note").textContent = RATE_NOTE;
+  rateLock(false);
   paintStars(0);
+}
+/* After Send the stars and the comment stay as sent, and can't be changed. */
+function rateLock(on) {
+  $("rate").classList.toggle("sent", on);
+  $("rate-text").disabled = on;
+  for (const b of $("stars").children) b.disabled = on;
 }
 /* The stars open by themselves after the first game of a visit; after that they wait behind "Rate this game". */
 function rateShow() {
@@ -3716,9 +3725,10 @@ function initRating() {
     const b = document.createElement("button");
     b.type = "button"; b.setAttribute("role", "radio"); b.setAttribute("aria-label", `${i} star${i > 1 ? "s" : ""}`); b.setAttribute("aria-checked", "false");
     b.innerHTML = STAR_SVG;
-    b.addEventListener("pointerenter", () => paintStars(i));
+    b.addEventListener("pointerenter", () => { if (!b.disabled) paintStars(i); });
     b.addEventListener("pointerleave", () => paintStars(stats.stars));
     b.addEventListener("click", () => {
+      if (b.disabled) return;
       stats.stars = i; paintStars(i);
       if (stats.id) statsPost("rate", { id: stats.id, stars: i });
       $("rate-q").textContent = "Thanks! Anything we could do better?";
@@ -3729,8 +3739,10 @@ function initRating() {
   $("rate-text").addEventListener("input", () => { clearTimeout(stats.timer); stats.timer = setTimeout(() => rateFlush(false), 1500); });
   $("rate-send").addEventListener("click", () => {
     rateFlush(false);
-    $("rate-note").textContent = $("rate-text").value.trim() ? "Thanks for the idea!" : "Thanks!";
+    $("rate-q").textContent = "Thanks for your feedback!";
+    $("rate-note").textContent = $("rate-text").value.trim() ? "Sent anonymously. Thanks for the idea!" : "Sent anonymously.";
     $("rate-send").hidden = true;
+    rateLock(true);
   });
   window.addEventListener("pagehide", () => statsLeaving(true));
 }
